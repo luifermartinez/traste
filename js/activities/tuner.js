@@ -1,0 +1,116 @@
+import { h } from '../ui.js';
+import { OPEN_MIDI, STRING_NUMS, midiToFreq, pcName, pcShort, freqToMidi } from '../music.js';
+import { acquireMic, releaseMic, readPitch, playNote, audioRunning } from '../audio.js';
+import { header, errorBox, vibrate } from './common.js';
+
+const IN_TUNE = 5; // cents
+const HOLD_MS = 600;
+
+/** Afinador. En sesión termina solo cuando las 6 cuerdas están afinadas. */
+export function mount(root, { def, onDone, standalone = false }) {
+  const tuned = new Set();
+  const chips = {};
+  const noteEl = h('div', { class: 'tuner-note' }, '—');
+  const needle = h('div', { class: 'tuner-needle' });
+  const centsEl = h('div', { class: 'tuner-cents' }, 'Toca una cuerda al aire');
+  const hintEl = h('div', { class: 'tuner-hint' });
+  let mic = null;
+  let timer = null;
+  let t0 = null;
+  let inTuneSince = null;
+  let mutedUntil = 0;
+  const recent = [];
+
+  const strings = h('div', { class: 'tuner-strings' }, STRING_NUMS.map((s) => {
+    chips[s] = h('button', {
+      class: 'chip',
+      title: 'Escuchar nota de referencia',
+      onclick: () => { playNote(OPEN_MIDI[s], undefined, 0.6, 2); mutedUntil = performance.now() + 2500; },
+    }, h('small', null, `${s}ª`), pcShort(OPEN_MIDI[s]));
+    return chips[s];
+  }));
+
+  const meter = h('div', { class: 'tuner-meter' }, h('div', { class: 'tuner-scale' }, h('span', null, '−50'), h('span', null, '0'), h('span', null, '+50')), needle);
+  const body = h('div', { class: 'tuner' }, noteEl, meter, centsEl, hintEl, strings,
+    h('p', { class: 'muted small center' }, 'Toca el nombre de una cuerda para oír su nota de referencia.'));
+
+  const skipBtn = !standalone && h('button', { class: 'btn ghost', onclick: () => onDone({ skipped: true }) }, 'Ya está afinada, saltar');
+  root.append(def ? header(def) : h('h2', null, 'Afinador'), body, skipBtn || '');
+
+  function tick() {
+    if (performance.now() < mutedUntil) return;
+    if (!audioRunning()) { centsEl.textContent = '👆 Toca la pantalla para activar el micrófono'; return; }
+    if (centsEl.textContent.startsWith('👆')) centsEl.textContent = 'Toca una cuerda al aire';
+    const p = readPitch(mic);
+    if (!p.freq || p.clarity < 0.85 || p.freq < 70 || p.freq > 400) {
+      if (p.rms < 0.004) { inTuneSince = null; needle.classList.remove('ok'); }
+      return;
+    }
+    recent.push(p.freq);
+    if (recent.length > 5) recent.shift();
+    const freq = recent.slice().sort((a, b) => a - b)[recent.length >> 1];
+    t0 ??= performance.now();
+
+    let best = null;
+    for (const s of STRING_NUMS) {
+      const cents = 1200 * Math.log2(freq / midiToFreq(OPEN_MIDI[s]));
+      if (!best || Math.abs(cents) < Math.abs(best.cents)) best = { s, cents };
+    }
+    if (Math.abs(best.cents) > 350) {
+      noteEl.textContent = pcName(Math.round(freqToMidi(freq)));
+      centsEl.textContent = 'Muy lejos de cualquier cuerda: ¿es una cuerda al aire?';
+      return;
+    }
+    const { s, cents } = best;
+    noteEl.textContent = `${s}ª · ${pcName(OPEN_MIDI[s])}`;
+    const c = Math.max(-50, Math.min(50, cents));
+    needle.style.transform = `translateX(-50%) rotate(${c * 1.4}deg)`;
+    centsEl.textContent = `${cents > 0 ? '+' : ''}${Math.round(cents)} cents · ${freq.toFixed(1)} Hz`;
+    Object.values(chips).forEach((el) => el.classList.remove('active'));
+    chips[s].classList.add('active');
+
+    if (Math.abs(cents) <= IN_TUNE) {
+      needle.classList.add('ok');
+      hintEl.textContent = '✓ Afinada';
+      hintEl.className = 'tuner-hint ok';
+      inTuneSince ??= { s, t: performance.now() };
+      if (inTuneSince.s === s && performance.now() - inTuneSince.t > HOLD_MS && !tuned.has(s)) {
+        tuned.add(s);
+        chips[s].classList.add('done');
+        vibrate(40);
+        if (!standalone && tuned.size === 6) finish();
+      }
+    } else {
+      needle.classList.remove('ok');
+      inTuneSince = null;
+      hintEl.textContent = cents < 0 ? '↑ Grave: tensa la cuerda' : '↓ Aguda: aflójala un poco y vuelve a subir';
+      hintEl.className = 'tuner-hint';
+    }
+  }
+
+  function finish() {
+    clearInterval(timer);
+    const secs = Math.round((performance.now() - t0) / 1000);
+    hintEl.textContent = `🎉 Las 6 cuerdas afinadas en ${secs} s`;
+    setTimeout(() => onDone({ value: secs }), 900);
+  }
+
+  let disposed = false;
+  (async () => {
+    try {
+      const m = await acquireMic();
+      if (disposed) { releaseMic(); return; }
+      mic = m;
+      timer = setInterval(tick, 40);
+    } catch (err) {
+      if (skipBtn) skipBtn.remove();
+      body.replaceWith(errorBox(err, standalone ? null : () => onDone({ skipped: true })));
+    }
+  })();
+
+  return () => {
+    disposed = true;
+    clearInterval(timer);
+    if (mic) releaseMic();
+  };
+}
