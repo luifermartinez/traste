@@ -8,7 +8,9 @@ import { header, errorBox, roundButtons, vibrate, startButton, setFeedback } fro
 const matches = (played, target) => played === target || Math.abs(played - target) === 12;
 
 export function mount(root, { def, onDone }) {
-  const notes = parseTab(def.config.tab);
+  // Con capo cada traste suena `capo` semitonos más agudo (riffs de tus canciones).
+  const capo = def.config.capo || 0;
+  const notes = parseTab(def.config.tab).map((n) => ({ ...n, midi: n.midi + capo }));
   const results = [];
   let listener = null;
   let idx = 0;

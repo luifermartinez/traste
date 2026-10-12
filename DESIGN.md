@@ -173,7 +173,10 @@ Fondo superficie 2, segmento activo en superficie con sombra leve y texto en tin
 Grupos de filas sobre superficie con separadores de 1px; cada fila: icono o paso numerado, título y subtítulo, valor o chevron a la derecha.
 
 ### Navigation
-Barra inferior de cuatro pestañas (icono de línea + texto). Activa en el color del calibre.
+Barra inferior de cinco pestañas (Hoy, Ruta, Canciones, Progreso, Herramientas; icono de línea + texto). Activa en el color del calibre.
+
+### Song sheet
+Letra con acordes: cada acorde (600, en el color del calibre) va encima del trozo de letra donde cae, en Rubik; las líneas fluyen y se parten en los trozos, nunca por columnas fijas. Al tocar, el acorde en curso se rellena con el calibre y la línea siguiente se ve atenuada debajo. Las secciones (Intro, Coro) son subtítulos atenuados.
 
 ### Pick stamp (signature)
 La púa rellena del calibre con el grosor estampado (".50", "mm") en la tinta del calibre. Grande y recortada en el campo de Hoy; en fila de seis, unidas por la línea del recorrido, en la Ruta; pequeña en cada encabezado de etapa.
@@ -192,3 +195,4 @@ La púa rellena del calibre con el grosor estampado (".50", "mm") en la tinta de
 - **Don't** usar emojis ni caracteres Unicode como iconos.
 - **Don't** dibujar amplificadores, perillas o vúmetros como decoración.
 - **Don't** añadir texturas, grano, brillos o degradados de fondo.
+- **Don't** usar monoespaciada salvo en el campo donde se pega una hoja de acordes, que se alinea por columnas.

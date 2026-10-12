@@ -1,5 +1,5 @@
 // Aplicación: rutas, vistas y el ejecutor de la sesión diaria.
-import { h, progressBar, steps, status, sparkSvg, svgNode, chordCard, metricText, metricParts, toast, pick } from './ui.js';
+import { h, progressBar, steps, status, sparkSvg, svgNode, chordCard, metricText, metricParts, toast, pick, topBar } from './ui.js';
 import { icon, TYPE_ICON } from './icons.js';
 import { STAGES, SKILLS, SKILL_BY_ID, TYPE_LABEL } from './curriculum.js';
 import {
@@ -8,6 +8,8 @@ import {
   totalMinutes, daysSinceLastSession, weekStart,
 } from './store.js';
 import { planRoles, resolveRole, previewSession, ROLE_LABEL, currentStage } from './session.js';
+import { findSongDef, noteSongStep } from './songs.js';
+import { viewSongs, viewSong, viewPlaySong } from './songs-ui.js';
 import { runSkill } from './activities/index.js';
 import * as tunerActivity from './activities/tuner.js';
 import { setNotation, CHORDS, chordName } from './music.js';
@@ -22,31 +24,30 @@ setSensitivity(state.settings.sensitivity);
 
 const app = document.getElementById('app');
 const tabsEl = document.getElementById('tabs');
+const TABS = [['hoy', 'home', 'Hoy'], ['ruta', 'route', 'Ruta'], ['canciones', 'music', 'Canciones'], ['progreso', 'chart', 'Progreso'], ['herramientas', 'grid', 'Herramientas']];
+const TAB_OF = { tool: 'herramientas', ajustes: 'herramientas', cancion: 'canciones', tocar: 'canciones' };
+/** Habilidad de la ruta o de una de tus canciones. */
+const findDef = (id) => SKILL_BY_ID[id] || findSongDef(id);
 let cleanup = null;
 let session = null;
 
-const TABS = [['hoy', 'home', 'Hoy'], ['ruta', 'route', 'Ruta'], ['progreso', 'chart', 'Progreso'], ['herramientas', 'grid', 'Herramientas']];
 const go = (hash) => { location.hash = hash; };
 const plural = (n, s, p = `${s}s`) => `${n} ${n === 1 ? s : p}`;
 const mmss = (sec) => `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`;
 const MIN_SESSION_SEC = 120;
-const topBar = (title, back, { settings = true } = {}) => h('header', { class: 'top' },
-  back && h('a', { href: back, class: 'icon-btn', 'aria-label': 'Volver' }, icon('back', { size: 22 })),
-  h('h1', { style: back ? null : { paddingLeft: '8px' } }, title),
-  settings && h('a', { href: '#/ajustes', class: 'icon-btn', 'aria-label': 'Ajustes' }, icon('sliders', { size: 21 })));
 
 function render() {
   cleanup?.();
   cleanup = null;
-  const [name = 'hoy', arg] = location.hash.replace(/^#\/?/, '').split('/');
+  const [name = 'hoy', ...args] = location.hash.replace(/^#\/?/, '').split('/');
   // El calibre de la etapa actual tiñe toda la app.
   document.documentElement.dataset.gauge = currentStage();
   app.replaceChildren();
   window.scrollTo(0, 0);
   const view = VIEWS[name] || VIEWS.hoy;
-  cleanup = view(app, arg ? decodeURIComponent(arg) : undefined) || null;
-  tabsEl.hidden = name === 'sesion' || name === 'practicar';
-  const active = name === 'tool' || name === 'ajustes' ? 'herramientas' : name;
+  cleanup = view(app, ...args.map(decodeURIComponent)) || null;
+  tabsEl.hidden = name === 'sesion' || name === 'practicar' || name === 'tocar';
+  const active = TAB_OF[name] || name;
   tabsEl.replaceChildren(...TABS.map(([id, ic, label]) => h('a', { href: `#/${id}`, class: id === active ? 'on' : '', 'aria-current': id === active ? 'page' : null }, icon(ic, { size: 22 }), label)));
   const css = getComputedStyle(document.documentElement);
   document.querySelector('meta[name="theme-color"]').content = (VIEWS[name] === viewToday || !VIEWS[name] ? css.getPropertyValue('--g') : css.getPropertyValue('--ground')).trim();
@@ -131,7 +132,7 @@ function doneToday() {
   return [
     h('div', { class: 'section' }, h('h2', null, 'Hecho hoy')),
     h('div', { class: 'list' }, rows.map((b) => {
-      const def = SKILL_BY_ID[b.id];
+      const def = findDef(b.id);
       if (!def) return null;
       return h('div', { class: 'item' },
         h('span', { class: 'n done' }, icon('check', { size: 16 })),
@@ -164,7 +165,7 @@ function viewToday(root) {
     const blocks = previewSession(minutes);
     plan.replaceChildren(...blocks.map((b, k) => h('div', { class: 'item' },
       h('span', { class: `n ${k === 0 ? 'next' : ''}` }, k + 1),
-      h('div', { class: 'body' }, h('b', null, b.def.title), h('span', null, `${ROLE_LABEL[b.role]} · ${TYPE_LABEL[b.def.type]}`)),
+      h('div', { class: 'body' }, h('b', null, b.def.title), h('span', null, `${b.def.songTitle ?? ROLE_LABEL[b.role]} · ${b.def.typeLabel || TYPE_LABEL[b.def.type]}`)),
       h('span', { class: 'end' }, `${Math.max(1, Math.round(b.sec / 60))} min`))));
     lessonNote.replaceChildren(...(blocks.some((b) => b.role === 'lesson')
       ? [h('div', { class: 'note' }, icon('info', { size: 16 }), 'Después de cada lección, la sesión sigue con la práctica que esa lección desbloquea.')] : []));
@@ -198,6 +199,11 @@ function viewToday(root) {
     lessonNote,
     h('button', { class: 'btn primary big', onclick: () => startSession(minutes) }, icon('play', { size: 18 }), 'Empezar sesión'),
     ...doneToday(),
+    !state.songs.length && h('div', { class: 'list', style: { marginTop: '24px' } },
+      h('a', { class: 'item', href: '#/canciones/nueva' },
+        h('span', { class: 'tool-icon' }, icon('music', { size: 20 })),
+        h('div', { class: 'body' }, h('b', null, 'Aprende una canción que te guste'), h('span', null, 'Pega la letra con acordes y Traste te arma la práctica.')),
+        icon('chevron', { size: 18 }))),
     ...insights(),
     capsuleDue && h('div', { class: 'list', style: { marginTop: '24px' } },
       h('a', { class: 'item', href: '#/tool/capsula' },
@@ -238,6 +244,8 @@ function viewSession(root) {
       const { def, role: r } = res;
       session.used.add(def.id);
       if (role === 'flex') { state.lastFlex = r; save(); }
+      if (role === 'music') { state.lastMusic = r === 'song' ? 'song' : 'ruta'; save(); }
+      if (r === 'song') noteSongStep(def);
       blockEl.textContent = `${ROLE_LABEL[r]} · bloque ${session.blocks.length + 1}`;
       bar.firstChild.style.width = `${Math.round((session.idx / session.roles.length) * 100)}%`;
       const holder = h('div');
@@ -788,6 +796,9 @@ const VIEWS = {
   ajustes: viewSettings,
   sesion: viewSession,
   practicar: viewPractice,
+  canciones: viewSongs,
+  cancion: viewSong,
+  tocar: viewPlaySong,
   tool: (root, id) => (TOOL_VIEWS[id] ? TOOL_VIEWS[id](root) : go('#/herramientas')),
 };
 

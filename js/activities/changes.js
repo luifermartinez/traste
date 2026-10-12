@@ -9,7 +9,7 @@ const ROUND_SEC = 60;
 const MIN_GAP = 0.3; // s entre cambios contados
 
 export function mount(root, { def, onDone }) {
-  const { a, b } = def.config;
+  const { a, b, easy = false } = def.config;
   const results = [];
   let count = 0;
   let running = false;
@@ -19,8 +19,8 @@ export function mount(root, { def, onDone }) {
   let lastOnset = 0;
   let timer = null;
 
-  const cardA = chordCard(a);
-  const cardB = chordCard(b);
+  const cardA = chordCard(a, '', { easy });
+  const cardB = chordCard(b, '', { easy });
   const counter = h('div', { class: 'big-count' }, '0');
   const clock = h('div', { class: 'clock' }, `${ROUND_SEC} s`);
   const msg = h('div', { class: 'prompt-sub' }, 'Un rasgueo por acorde. No importa que suene perfecto: importa cambiar.');

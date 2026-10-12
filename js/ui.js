@@ -1,5 +1,6 @@
 // Utilidades de interfaz: creación de nodos y dibujos SVG (acordes, mástil, tablatura, gráficas).
-import { CHORDS, chordName, OPEN_MIDI, pcShort } from './music.js';
+import { chordName, getNotation, OPEN_MIDI, pcShort } from './music.js';
+import { shapeFor } from './chords.js';
 import { icon } from './icons.js';
 
 export function h(tag, props, ...children) {
@@ -37,6 +38,12 @@ export function progressBar(frac, cls = '') {
   return h('div', { class: `bar ${cls}` }, h('div', { style: { width: `${Math.round(Math.max(0, Math.min(1, frac)) * 100)}%` } }));
 }
 
+/** Barra superior de cada pantalla: volver (opcional), título y acceso a Ajustes. */
+export const topBar = (title, back, { settings = true } = {}) => h('header', { class: 'top' },
+  back && h('a', { href: back, class: 'icon-btn', 'aria-label': 'Volver' }, icon('back', { size: 22 })),
+  h('h1', { style: back ? null : { paddingLeft: '8px' } }, title),
+  settings && h('a', { href: '#/ajustes', class: 'icon-btn', 'aria-label': 'Ajustes' }, icon('sliders', { size: 21 })));
+
 /** Barra segmentada: `done` de `total` pasos. */
 export function steps(done, total) {
   return h('div', { class: 'steps' }, Array.from({ length: total }, (_, i) => h('span', { class: i < done ? 'on' : '' })));
@@ -67,8 +74,8 @@ export function pick(gauge, { stage = null, size = 64, cls = '', caption = 'mm' 
 
 // ─────────────── Diagrama de acorde ───────────────
 
-export function chordSvg(sym) {
-  const c = CHORDS[sym];
+export function chordSvg(sym, { easy = false } = {}) {
+  const c = shapeFor(sym, { easy });
   const pressed = c.frets.filter((f) => f > 0);
   const maxF = Math.max(0, ...pressed);
   const base = maxF <= 4 ? 1 : Math.min(...pressed);
@@ -97,8 +104,22 @@ export function chordSvg(sym) {
   return `${s}</svg>`;
 }
 
-export function chordCard(sym, extraClass = '') {
-  return h('div', { class: `chord-card ${extraClass}` }, h('div', { class: 'chord-name' }, chordName(sym)), svgNode(chordSvg(sym)));
+/** Diagrama con nombre. `caption`: línea corta bajo el diagrama (p. ej. "Nuevo"). */
+export function chordCard(sym, extraClass = '', { easy = false, caption = null } = {}) {
+  return h('div', { class: `chord-card ${extraClass}` }, h('div', { class: 'chord-name' }, chordName(sym)), svgNode(chordSvg(sym, { easy })),
+    caption && h('div', { class: 'chord-cap' }, caption));
+}
+
+/** Nombre corto para hojas de canción ("Sol", o "G" si eliges notación inglesa). */
+export const chordShort = (sym) => chordName(sym, getNotation() === 'en' ? 'en' : 'es');
+
+/** Línea de canción: cada acorde encima del trozo de letra donde cae. `active`: trozo resaltado. */
+export function lyricLine(line, active = -1, cls = '') {
+  const only = line.segs.every((s) => !s.text.trim());
+  return h('div', { class: `lyric ${only ? 'only' : ''} ${cls}` }, line.segs.map((s, i) => h('span', { class: `ls ${i === active ? 'on' : ''}` },
+    h('b', null, s.chord ? chordShort(s.chord) : ' '),
+    !only && h('span', null, s.text || ' '))),
+  line.repeat > 1 && h('span', { class: 'rep' }, `×${line.repeat}`));
 }
 
 // ─────────────── Mástil ───────────────

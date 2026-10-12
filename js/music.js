@@ -21,12 +21,11 @@ export function pcName(pc, mode = notation) {
   return `${es} (${en})`;
 }
 
-/** "Am" → "Lam (Am)", "Fmaj7" → "Famaj7 (Fmaj7)". */
+/** "Am" → "Lam (Am)", "Fmaj7" → "Famaj7 (Fmaj7)", "G/B" → "Sol/Si (G/B)". */
 export function chordName(sym, mode = notation) {
-  const m = /^([A-G])([#b]?)(.*)$/.exec(sym);
-  const es = LETTER_ES[m[1]] + m[2] + m[3];
-  if (mode === 'es') return es;
   if (mode === 'en') return sym;
+  const es = sym.replace(/(^|\/)([A-G])/g, (_, pre, l) => pre + LETTER_ES[l]);
+  if (mode === 'es') return es;
   return `${es} (${sym})`;
 }
 
@@ -75,14 +74,6 @@ export const CHORDS = {
   C5: { frets: [-1, 3, 5, 5, -1, -1], fingers: [0, 1, 3, 4, 0, 0] },
   D5: { frets: [-1, 5, 7, 7, -1, -1], fingers: [0, 1, 3, 4, 0, 0] },
 };
-
-/** Notas MIDI del acorde, de grave a agudo. */
-export function chordMidis(sym) {
-  const c = CHORDS[sym];
-  const out = [];
-  c.frets.forEach((f, i) => { if (f >= 0) out.push(OPEN_MIDI[6 - i] + f); });
-  return out;
-}
 
 export const MAJOR = [0, 2, 4, 5, 7, 9, 11];
 export const MINOR_PENTA = [0, 3, 5, 7, 10];

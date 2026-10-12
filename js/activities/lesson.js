@@ -34,7 +34,7 @@ export function mount(root, { def, onDone }) {
     } else if (b.songs) {
       body.append(h('div', { class: 'songs' },
         h('div', { class: 'head' }, icon('music', { size: 18 }), 'Canciones reales con estos acordes'),
-        h('p', { class: 'muted small' }, 'Busca "título + acordes" en cualquier web de acordes. Si la tonalidad no coincide, usa la cejilla (capo) o el transpositor de la web.'),
+        h('p', { class: 'muted small' }, 'Busca "título + acordes" en cualquier web de acordes y pégala en la pestaña Canciones: Traste te sugiere capo y te arma la práctica.'),
         h('ul', null, b.songs.map((s) => h('li', null, s)))));
     } else if (b.check) {
       body.append(h('h3', null, 'Antes de marcarla como hecha'));

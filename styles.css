@@ -415,6 +415,55 @@ a.skill:hover { background: var(--surface-2); }
 .skill .bar { margin-top: 7px; }
 .skill > .ic { color: var(--faint); }
 
+/* ─────────── Canciones ─────────── */
+.input { width: 100%; background: var(--surface); color: var(--fg); border: 1px solid var(--line-strong); border-radius: var(--r-sm); min-height: 46px; padding: 10px 12px; font: inherit; }
+.input:focus { outline: none; border-color: var(--g); box-shadow: 0 0 0 3px color-mix(in oklab, var(--g) 30%, transparent); }
+.input::placeholder { color: var(--muted); opacity: 1; }
+/* Las hojas de acordes se alinean por columnas: aquí la monoespaciada es funcional. */
+textarea.sheet-input { min-height: 260px; resize: vertical; line-height: 1.45; white-space: pre; overflow-wrap: normal; overflow-x: auto; font-family: ui-monospace, 'Cascadia Mono', Consolas, Menlo, monospace; font-size: .85rem; }
+.form-field { display: flex; flex-direction: column; gap: 6px; margin: 0 0 16px; }
+.form-field > span { font-weight: 500; }
+.form-field > small { color: var(--muted); font-size: .82rem; }
+.form-field .btn-row .input { flex: 1; }
+.form-field .btn-row .btn { flex: none; }
+.sheet-preview { margin: -6px 0 14px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 6px; }
+.chips button, .chips.static span { border: 1px solid var(--line-strong); background: var(--surface); color: var(--fg); border-radius: 999px; padding: 6px 13px; font: inherit; font-size: .9rem; font-weight: 500; cursor: pointer; }
+.chips.static span { cursor: default; padding: 3px 11px; }
+.chips button.on { background: var(--g); border-color: var(--g); color: var(--g-ink); }
+.chord-strip { display: flex; gap: 10px; overflow-x: auto; margin: 0 -18px; padding: 4px 18px 12px; scroll-snap-type: x proximity; }
+.chord-strip .chord-card { flex: none; scroll-snap-align: start; cursor: pointer; }
+.chord-cap { font-size: .78rem; color: var(--muted); font-weight: 500; }
+.chord-card.new .chord-cap { color: var(--g-text); }
+.chord-card.barre .chord-cap { color: var(--warn); }
+.set-row { display: flex; align-items: center; gap: 14px; padding: 12px 16px; min-height: 56px; }
+.set-row .body { flex: 1; min-width: 0; }
+.set-row .body b { display: block; font-weight: 500; }
+.set-row .body span { display: block; font-size: .82rem; color: var(--muted); }
+.set-row select, .set-row .input { width: auto; max-width: 52%; }
+.set-row .input[type=number] { width: 88px; }
+.set-row.col { flex-direction: column; align-items: stretch; gap: 10px; }
+input.switch { width: 22px; height: 22px; margin: 0; flex: none; }
+.sk-stars { margin-left: 8px; vertical-align: -2px; }
+
+/* Letra con acordes encima: cada trozo lleva su acorde. */
+.sheet h3 { font-size: 1rem; color: var(--muted); font-weight: 600; margin: 18px 0 6px; }
+.sheet h3:first-child { margin-top: 0; }
+.sheet-gap { height: 10px; }
+.lyric { display: flex; flex-wrap: wrap; align-items: flex-end; margin: 2px 0 6px; }
+.ls { display: inline-flex; flex-direction: column; white-space: pre-wrap; }
+.ls b { align-self: flex-start; font-weight: 600; font-size: .9rem; color: var(--g-text); min-height: 1.3em; padding-right: 6px; }
+.ls > span { line-height: 1.4; }
+.lyric.only .ls b { font-size: 1rem; padding-right: 16px; }
+.lyric .rep { color: var(--muted); font-size: .85rem; align-self: center; }
+.lyric-text { margin: 2px 0 6px; line-height: 1.4; }
+.pa-lyrics { margin: 12px 0 4px; padding: 12px 14px; background: var(--surface-2); border-radius: var(--r-sm); min-height: 96px; }
+.pa-lyrics .lyric { font-size: 1.15rem; margin: 0; }
+.pa-lyrics .lyric .ls b { font-size: 1.05rem; }
+.pa-lyrics .ls.on b { color: var(--g-ink); background: var(--g); border-radius: 6px; padding: 0 6px; margin-right: 4px; }
+.pa-lyrics .lyric.next { font-size: .95rem; color: var(--muted); margin-top: 10px; }
+.pa-lyrics .lyric.next .ls b { color: var(--muted); font-size: .85rem; }
+
 /* ─────────── Progreso ─────────── */
 .badge-row .ic { color: var(--g-text); }
 .medal { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; background: var(--g-soft); color: var(--g-text); flex: none; }

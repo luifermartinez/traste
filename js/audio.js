@@ -1,6 +1,7 @@
 // Motor de audio: contexto, micrófono, detección de tono (YIN), onsets, metrónomo,
 // síntesis de cuerda pulsada (Karplus-Strong) y calibración de latencia.
-import { midiToFreq, freqToMidi, chordMidis } from './music.js';
+import { midiToFreq, freqToMidi } from './music.js';
+import { chordMidis } from './chords.js';
 
 let ctx = null;
 export function audioCtx() {
@@ -291,9 +292,9 @@ export function playNote(midi, time = now(), vol = 0.5, dur = 1.8) {
   return dur;
 }
 
-/** Rasgueo de un acorde (↓ de grave a agudo, ↑ al revés). */
-export function strum(sym, time = now(), { up = false, vol = 0.28, dur = 1.2, spread = 0.014 } = {}) {
-  const notes = chordMidis(sym);
+/** Rasgueo de un acorde (↓ de grave a agudo, ↑ al revés). easy/capo: como lo toca el alumno. */
+export function strum(sym, time = now(), { up = false, vol = 0.28, dur = 1.2, spread = 0.014, easy = false, capo = 0 } = {}) {
+  const notes = chordMidis(sym, { easy, capo });
   const order = up ? notes.slice().reverse() : notes;
   order.forEach((m, i) => playNote(m, time + i * spread, vol * (up ? 0.75 : 1), dur));
 }

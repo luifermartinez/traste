@@ -3,9 +3,10 @@
 // desbloquea su práctica inmediatamente.
 import { SKILLS, SKILL_BY_ID, CATEGORY } from './curriculum.js';
 import { state, isPassed, isAvailable, progress, reqsMet } from './store.js';
+import { activeSong, nextSongDef } from './songs.js';
 
 export const ROLE_LABEL = {
-  lesson: 'Aprende', tuner: 'Afina', focus: 'Foco', focus2: 'Foco 2', review: 'Repaso', mind: 'Mente', music: 'Música',
+  lesson: 'Aprende', tuner: 'Afina', focus: 'Foco', focus2: 'Foco 2', review: 'Repaso', mind: 'Mente', music: 'Música', song: 'Tu canción',
 };
 // Plan de roles y segundos orientativos según los minutos disponibles.
 // Condicionales: 'lesson?' solo si no hay técnica pendiente disponible; 'flex' (sesiones
@@ -71,7 +72,14 @@ export function resolveRole(role, used, prev = []) {
     case 'focus2': return as('focus2', choose('tecnica', used, { avoidType: focusType }));
     case 'review': return as('review', choose('tecnica', used, { preferPassed: true, avoidType: focusType }));
     case 'mind': return as('mind', choose('mente', used));
-    case 'music': return as('music', choose('musica', used));
+    case 'music': {
+      // Con una canción activa, el bloque Música alterna entre ella y la ruta (state.lastMusic).
+      const song = activeSong();
+      const fromSong = song && nextSongDef(song, used);
+      const fromPath = choose('musica', used);
+      if (fromSong && (state.lastMusic !== 'song' || !fromPath)) return as('song', fromSong);
+      return as('music', fromPath);
+    }
     case 'flex': {
       if (prev.some((b) => b.role === 'lesson')) return null;
       const order = state.lastFlex === 'mind' ? ['review', 'mind'] : ['mind', 'review'];

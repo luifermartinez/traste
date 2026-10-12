@@ -17,6 +17,9 @@ const defaults = () => ({
   skills: {},
   sessions: [],
   badges: {},
+  songs: [], // tus canciones (songs.js)
+  activeSong: null, // la que entra en tus sesiones
+  lastMusic: null, // 'song' | 'ruta': el bloque Música alterna entre tu canción y la ruta
 });
 
 function load() {

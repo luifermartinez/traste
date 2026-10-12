@@ -54,6 +54,16 @@ Cada etapa es un calibre de púa con su color (.50 rojo, .60 naranja, .73 amaril
 - **Cápsula del tiempo**: graba 30 s cada mes y escucha la diferencia.
 - XP, niveles e insignias.
 
+### 5. Tus canciones
+En la pestaña **Canciones** pegas cualquier canción con acordes (de LaCuerda.net, Cifra Club, Ultimate Guitar… o solo la secuencia `Am F C G`) y Traste:
+- **Lee la hoja**: acordes encima de la letra, formato ChordPro (`[Am]Hola`), nombres en inglés o en español (`Lam`, `SOL7`, `Fa#m`), secciones (`[Coro]`, `Estribillo:`), repeticiones (`x2`), el capo que indica la hoja y tablaturas de 6 líneas (se convierten en riffs).
+- **Te dice qué acordes ya tocas** y cuáles son nuevos (y en qué etapa de la ruta se aprenden).
+- **Te recomienda capo** para tocarla con formas más fáciles sin cambiar el tono, y una **versión fácil** de los acordes con cejilla (mini-cejilla de 4 cuerdas).
+- **Te arma los pasos**: cambios de un minuto entre los acordes que van seguidos (del más difícil al más fácil), tocar la canción siguiendo la letra con la guitarra de la app (entera o por secciones, subiendo el tempo hasta el original) y los riffs de las tablaturas.
+- Si la marcas **En tus sesiones**, el bloque Música de cada sesión alterna entre tu canción y la ruta.
+
+Las canciones que pegas se guardan solo en tu dispositivo.
+
 ---
 
 ## Consejos para que el micrófono te escuche bien
@@ -113,7 +123,7 @@ y abre `http://localhost:3000` (o `:8000`). En el móvil por la IP de tu red **n
   - Melodías en formato `cuerda:traste*duración`, p.ej. `'1:0 1:3*2 2:1*.5'`.
   - Para que una habilidad sea más fácil o difícil, cambia `metric.target` o la escalera `ladder` (BPM).
 - **Preguntas de teoría**: `js/theory.js`.
-- **Acordes** (diagramas): `CHORDS` en `js/music.js`.
+- **Acordes** (diagramas de la ruta): `CHORDS` en `js/music.js`. Cualquier otro acorde se lee y se convierte en forma tocable en `js/chords.js`.
 - **Patrones de rasgueo**: `PATTERNS` en `js/music.js`.
 - **Cómo se arma cada sesión**: `js/session.js`.
 - **Aspecto** (colores de calibre, tipografía, componentes): `styles.css`; las reglas del diseño están en `DESIGN.md`.
@@ -125,6 +135,9 @@ Si añades archivos nuevos, agrégalos también a la lista `FILES` de `sw.js` pa
 index.html, styles.css, manifest.webmanifest, sw.js, icons/, fonts/ (Rubik, OFL)
 PRODUCT.md, DESIGN.md  para quién es y reglas del diseño
 js/app.js           vistas (Hoy, Ruta, Progreso, Herramientas, Ajustes) y ejecutor de sesión
+js/songs.js         tus canciones: lectura de hojas de acordes, capo, pasos de práctica
+js/songs-ui.js      pantallas de Canciones
+js/chords.js        cualquier acorde escrito → forma tocable, versión fácil y capo recomendado
 js/session.js       generador adaptativo de la sesión diaria
 js/store.js         progreso, XP, rachas, insignias (localStorage)
 js/curriculum.js    ruta de aprendizaje
