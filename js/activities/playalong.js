@@ -1,9 +1,10 @@
 // Toca con la banda: progresión con guitarra de acompañamiento y metrónomo.
-import { h, chordCard } from '../ui.js';
+import { h, chordCard, stars } from '../ui.js';
+import { icon } from '../icons.js';
 import { PATTERNS, chordName } from '../music.js';
 import { Metronome, strum, atAudioTime, audioCtx } from '../audio.js';
 import { state, currentParam } from '../store.js';
-import { header } from './common.js';
+import { header, startButton } from './common.js';
 
 export function mount(root, { def, onDone }) {
   const { chords, beatsPerChord, pattern, cycles } = def.config;
@@ -16,27 +17,27 @@ export function mount(root, { def, onDone }) {
   let clickOn = true;
 
   const cur = h('div', { class: 'pa-current' });
-  const nxt = h('div', { class: 'pa-next muted' });
+  const nxt = h('div', { class: 'pa-next' });
   const beatsEl = h('div', { class: 'beats' }, Array.from({ length: beatsPerChord }, () => h('span')));
-  const info = h('div', { class: 'prompt-sub muted' }, `${bpm} BPM · ${cycles} vueltas`);
+  const info = h('div', { class: 'eyebrow center', style: { display: 'block' } }, `${bpm} BPM · ${cycles} vueltas`);
   const patEl = h('div', { class: 'pa-pattern' }, h('span', { class: 'muted small' }, `Rasgueo: ${pat.name}`), h('b', null, pat.strokes.join(' ')));
   const prog = h('div', { class: 'pa-prog' }, chords.map((c) => h('span', null, chordName(c, 'es'))));
-  const toggles = h('div', { class: 'row gap center' },
+  const toggles = h('div', { class: 'row center', style: { gap: '20px' } },
     h('label', { class: 'check inline' }, h('input', { type: 'checkbox', checked: true, onchange: (e) => { backing = e.target.checked; } }), 'Guitarra de la app'),
     h('label', { class: 'check inline' }, h('input', { type: 'checkbox', checked: true, onchange: (e) => { clickOn = e.target.checked; if (met) met.volume = clickOn ? state.settings.clickVol : 0; } }), 'Clic'));
   const stage = h('div', { class: 'stage' }, info, prog, h('div', { class: 'pa-main' }, cur, nxt), beatsEl, patEl, toggles);
-  const controls = h('div', { class: 'controls' }, h('button', { class: 'btn primary big', onclick: () => start() }, '▶ Empezar'));
+  const controls = h('div', { class: 'controls' }, startButton('Empezar', () => start()));
   root.append(header(def, h('p', { class: 'muted small' }, 'Rasguea con el patrón mostrado. Si te pierdes, no pares: entra en el siguiente acorde.')), stage, controls);
 
   const showChord = (i) => {
     cur.replaceChildren(chordCard(chords[i % chords.length], 'big'));
-    nxt.replaceChildren('Siguiente: ', chordName(chords[(i + 1) % chords.length]));
+    nxt.replaceChildren(h('span', { class: 'eyebrow' }, 'Siguiente'), h('b', null, chordName(chords[(i + 1) % chords.length])));
     [...prog.children].forEach((el, k) => el.classList.toggle('on', k === i % chords.length));
   };
   showChord(0);
 
   function start() {
-    controls.replaceChildren(h('button', { class: 'btn ghost', onclick: () => stop(true) }, '■ Parar'));
+    controls.replaceChildren(h('button', { class: 'btn block', onclick: () => stop(true) }, icon('stop', { size: 16 }), 'Parar'));
     const beat = 60 / bpm;
     met = new Metronome({
       bpm,
@@ -72,15 +73,15 @@ export function mount(root, { def, onDone }) {
     timeouts.forEach(clearTimeout);
     timeouts = [];
     [...beatsEl.children].forEach((el) => el.classList.remove('on'));
-    info.textContent = early ? 'Parado. ¿Cómo fue hasta aquí?' : '¡Fin! ¿Cómo fue?';
-    const rate = (stars, txt) => h('button', { class: 'btn option', onclick: () => onDone({ value: stars }) }, `${'★'.repeat(stars)}${'☆'.repeat(3 - stars)}  ${txt}`);
+    info.textContent = early ? 'Parado. ¿Cómo fue hasta aquí?' : 'Fin. ¿Cómo fue?';
+    const rate = (n, txt) => h('button', { class: 'btn option', onclick: () => onDone({ value: n }) }, stars(n, 18), txt);
     controls.replaceChildren(
-      h('p', { class: 'muted small' }, 'Sé honesto/a: con 3 estrellas el tempo sube la próxima vez.'),
-      h('div', { class: 'options' },
+      h('p', { class: 'muted small' }, 'Sé honesto contigo: con 3 estrellas el tempo sube la próxima vez.'),
+      h('div', { class: 'rating' },
         rate(3, 'Sin parar y a tiempo en los cambios'),
         rate(2, 'Con algún tropiezo'),
         rate(1, 'Me perdí bastante')),
-      h('button', { class: 'btn ghost', onclick: () => start() }, '↻ Repetir antes de valorar'));
+      h('button', { class: 'btn ghost block', onclick: () => start() }, icon('refresh', { size: 18 }), 'Repetir antes de valorar'));
   }
 
   return () => {

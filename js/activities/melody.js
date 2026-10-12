@@ -1,8 +1,9 @@
 // Melodía en modo espera: la app avanza cuando detecta la nota correcta.
 import { h, svgNode, tabSvg } from '../ui.js';
+import { icon } from '../icons.js';
 import { parseTab, pcName } from '../music.js';
 import { NoteListener, playNote, now } from '../audio.js';
-import { header, errorBox, roundButtons, vibrate } from './common.js';
+import { header, errorBox, roundButtons, vibrate, startButton, setFeedback } from './common.js';
 
 const matches = (played, target) => played === target || Math.abs(played - target) === 12;
 
@@ -16,11 +17,11 @@ export function mount(root, { def, onDone }) {
 
   const tabWrap = h('div', { class: 'tab-wrap' });
   const big = h('div', { class: 'prompt' }, 'Escúchala primero si no la conoces');
-  const sub = h('div', { class: 'prompt-sub muted' });
+  const sub = h('div', { class: 'prompt-sub' });
   const feedback = h('div', { class: 'feedback' });
-  const listenBtn = h('button', { class: 'btn ghost', onclick: () => demo() }, '▶ Escuchar melodía');
+  const listenBtn = h('button', { class: 'btn ghost block', onclick: () => demo() }, icon('headphones', { size: 18 }), 'Escuchar la melodía');
   const stage = h('div', { class: 'stage' }, tabWrap, big, sub, feedback);
-  const controls = h('div', { class: 'controls' }, listenBtn, h('button', { class: 'btn primary big', onclick: () => startRound() }, '▶ Empezar'));
+  const controls = h('div', { class: 'controls' }, startButton('Empezar', () => startRound()), listenBtn);
   root.append(header(def), stage, controls);
 
   function draw() {
@@ -54,16 +55,14 @@ export function mount(root, { def, onDone }) {
     if (matches(midi, target)) {
       t0 ??= performance.now();
       idx++;
-      feedback.textContent = '';
-      feedback.className = 'feedback';
+      setFeedback(feedback, '', '');
       draw();
       if (idx === notes.length) endRound();
       return;
     }
     mistakes++;
     vibrate(20);
-    feedback.className = 'feedback bad';
-    feedback.textContent = `Sonó ${pcName(midi)} — ${midi < target ? 'la correcta es más aguda' : 'la correcta es más grave'}`;
+    setFeedback(feedback, 'bad', `Sonó ${pcName(midi)}: la correcta es más ${midi < target ? 'aguda' : 'grave'}`);
   }
 
   async function startRound() {
@@ -71,7 +70,7 @@ export function mount(root, { def, onDone }) {
     idx = 0;
     mistakes = 0;
     t0 = null;
-    feedback.textContent = 'Tócala a tu ritmo; el tiempo empieza con la primera nota.';
+    setFeedback(feedback, '', 'Tócala a tu ritmo; el tiempo empieza con la primera nota.');
     draw();
     try {
       listener = new NoteListener({ onNote });
@@ -88,11 +87,10 @@ export function mount(root, { def, onDone }) {
     const n = notes.length;
     const value = Math.round(((n - 1) / minutes) * (n / (n + mistakes)) * 10) / 10;
     results.push({ value, mistakes });
-    big.textContent = mistakes === 0 ? '✨ ¡Sin un solo error!' : `🎉 Completada con ${mistakes} error${mistakes === 1 ? '' : 'es'}`;
+    big.textContent = mistakes === 0 ? 'Sin un solo error' : `Completada con ${mistakes} error${mistakes === 1 ? '' : 'es'}`;
     sub.textContent = `Fluidez: ${value} notas/min (los errores la reducen)`;
-    feedback.textContent = value < def.metric.target ? 'Repite: la segunda vez siempre sale más fluida.' : '';
-    feedback.className = 'feedback';
-    controls.replaceChildren(listenBtn, roundButtons(startRound, () => {
+    setFeedback(feedback, '', value < def.metric.target ? 'Repite: la segunda vez siempre sale más fluida.' : '');
+    controls.replaceChildren(roundButtons(startRound, () => {
       const best = results.reduce((a, r) => (r.value > a.value ? r : a));
       onDone({ value: best.value, extra: { mistakes: best.mistakes } });
     }));

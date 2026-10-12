@@ -1,8 +1,9 @@
 // Cambios de un minuto: un rasgueo por acorde, la app cuenta los ataques por micrófono.
 import { h, chordCard } from '../ui.js';
+import { icon } from '../icons.js';
 import { chordName } from '../music.js';
 import { acquireMic, releaseMic, onMicEvent, click, now } from '../audio.js';
-import { header, roundButtons, countdown, vibrate } from './common.js';
+import { header, roundButtons, countdown, vibrate, startButton } from './common.js';
 
 const ROUND_SEC = 60;
 const MIN_GAP = 0.3; // s entre cambios contados
@@ -21,23 +22,27 @@ export function mount(root, { def, onDone }) {
   const cardA = chordCard(a);
   const cardB = chordCard(b);
   const counter = h('div', { class: 'big-count' }, '0');
-  const clock = h('div', { class: 'clock' }, `${ROUND_SEC}s`);
-  const msg = h('div', { class: 'prompt-sub muted' }, 'Un rasgueo por acorde. No importa que suene perfecto: importa cambiar.');
-  const modeBtn = h('button', { class: 'btn small ghost', onclick: () => setMode(!useMic) });
-  const tap = h('button', { class: 'btn tap', onclick: () => { if (running) bump(1); } }, 'Toca aquí si el micro no cuenta (+1)');
-  const minus = h('button', { class: 'btn small ghost', onclick: () => { if (count > 0) bump(-1); } }, '−1');
+  const clock = h('div', { class: 'clock' }, `${ROUND_SEC} s`);
+  const msg = h('div', { class: 'prompt-sub' }, 'Un rasgueo por acorde. No importa que suene perfecto: importa cambiar.');
+  const modeBtn = h('button', { class: 'btn small ghost block', onclick: () => setMode(!useMic) });
+  const tap = h('button', { class: 'btn', onclick: () => { if (running) bump(1); } });
+  const minus = h('button', { class: 'btn', style: { flex: '0 0 64px' }, onclick: () => { if (count > 0) bump(-1); } }, icon('minus', { size: 18 }));
 
   const stage = h('div', { class: 'stage' },
-    h('div', { class: 'chord-row' }, cardA, h('div', { class: 'swap' }, '⇄'), cardB),
-    h('div', { class: 'row between' }, clock, counter, minus), msg, tap, modeBtn);
-  const startBtn = h('button', { class: 'btn primary big', onclick: () => startRound() }, '▶ Empezar minuto');
+    h('div', { class: 'chord-row' }, cardA, h('div', { class: 'swap' }, icon('swap', { size: 22 })), cardB),
+    h('div', { class: 'col center', style: { alignItems: 'center', gap: '4px', margin: '18px 0 6px' } },
+      clock, counter, h('div', { class: 'eyebrow' }, 'cambios')),
+    msg,
+    h('div', { class: 'btn-row', style: { marginTop: '16px' } }, minus, tap),
+    modeBtn);
+  const startBtn = startButton('Empezar minuto', () => startRound());
   const controls = h('div', { class: 'controls' }, startBtn);
   root.append(header(def), stage, controls);
 
   function setMode(mic) {
     useMic = mic;
-    modeBtn.textContent = useMic ? '🎙️ Contando con el micrófono · cambiar a contar a mano' : '👆 Contando a mano · cambiar a micrófono';
-    tap.textContent = useMic ? 'Toca aquí si el micro no cuenta (+1)' : 'TOCA AQUÍ en cada cambio';
+    modeBtn.replaceChildren(icon(useMic ? 'mic' : 'plus', { size: 16 }), useMic ? 'Cuenta el micrófono · pasar a manual' : 'Cuentas tú · pasar a micrófono');
+    tap.replaceChildren(icon('plus', { size: 18 }), useMic ? 'Sumar uno' : 'Cambio');
   }
   setMode(true);
 
@@ -85,7 +90,7 @@ export function mount(root, { def, onDone }) {
     const end = performance.now() + ROUND_SEC * 1000;
     timer = setInterval(() => {
       const left = Math.max(0, Math.ceil((end - performance.now()) / 1000));
-      clock.textContent = `${left}s`;
+      clock.textContent = `${left} s`;
       if (left <= 0) endRound();
     }, 200);
   }
@@ -96,7 +101,7 @@ export function mount(root, { def, onDone }) {
     click(now(), true, 0.6);
     vibrate(120);
     results.push(count);
-    msg.textContent = `${count} cambios en un minuto. ${count < def.metric.target ? `Objetivo: ${def.metric.target}.` : '¡Objetivo cumplido!'}`;
+    msg.textContent = `${count} cambios en un minuto. ${count < def.metric.target ? `Objetivo: ${def.metric.target}.` : 'Objetivo cumplido.'}`;
     controls.replaceChildren(roundButtons(startRound, () => onDone({ value: Math.max(...results) })));
   }
 

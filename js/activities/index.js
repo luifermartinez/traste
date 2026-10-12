@@ -1,5 +1,6 @@
 // Monta una actividad, guarda su resultado y muestra qué significó.
-import { h, metricText } from '../ui.js';
+import { h, metricText, metricParts, status } from '../ui.js';
+import { icon } from '../icons.js';
 import { SKILLS } from '../curriculum.js';
 import { recordResult, completeLesson, checkBadges } from '../store.js';
 import * as lesson from './lesson.js';
@@ -43,27 +44,31 @@ export function runSkill(container, def, { budgetSec = 180, onFinish }) {
 }
 
 export function resultCard(s, onContinue) {
-  const lines = [];
   const { def } = s;
-  const unit = def.metric?.unit;
+  const lines = [];
+  let hero;
   if (s.lesson) {
-    lines.push(h('div', { class: 'res-big' }, '📘 Lección completada'));
+    hero = h('div', { class: 'res-title' }, 'Lección completada');
     const unlocked = SKILLS.filter((d) => d.req?.includes(def.id));
-    if (unlocked.length) lines.push(h('p', null, 'Desbloquea: ', unlocked.map((d) => d.title).join(' · ')));
+    if (unlocked.length) lines.push(status('arrowRight', `Desbloquea: ${unlocked.map((d) => d.title).join(' · ')}`, 'accent'));
   } else {
-    lines.push(h('div', { class: 'res-big' }, metricText(def, s.value)));
-    if (s.prevBest == null) lines.push(h('p', null, '📍 Primera marca: ya tienes un punto de partida para medir tu progreso.'));
+    const [value, unit] = metricParts(def, s.value);
+    hero = h('div', { class: 'res-value' }, h('b', null, value), h('span', null, unit));
+    if (s.prevBest == null) lines.push(status('info', 'Primera marca: ya tienes un punto de partida para medir tu progreso.', 'muted'));
     else if (s.isPR) {
       const d = Math.round(Math.abs(s.value - s.prevBest) * 10) / 10;
-      lines.push(h('p', { class: 'pr' }, `🏆 ¡Nuevo récord! Antes ${metricText(def, s.prevBest)} (${def.metric.lower ? '−' : '+'}${d})`));
-    } else lines.push(h('p', { class: 'muted' }, `Tu récord${s.param ? ` a ${s.param} BPM` : ''}: ${metricText(def, s.prevBest)}. Los días flojos también construyen.`));
-    if (s.met) lines.push(h('p', null, '🎯 Objetivo cumplido'));
-    if (s.passedNow) lines.push(h('p', { class: 'pr' }, '✅ Habilidad superada'));
-    if (s.stepUp) lines.push(h('p', null, `⏫ Siguiente reto: ${s.newParam} BPM`));
+      lines.push(status('trophy', `Nuevo récord. Antes ${metricText(def, s.prevBest)} (${def.metric.lower ? '−' : '+'}${d})`, 'accent'));
+    } else lines.push(status('trophy', `Tu récord${s.param ? ` a ${s.param} BPM` : ''}: ${metricText(def, s.prevBest)}. Los días flojos también construyen.`, 'muted'));
+    if (s.met) lines.push(status('target', 'Objetivo cumplido', 'ok'));
+    if (s.passedNow) lines.push(status('check', 'Habilidad superada', 'ok'));
+    if (s.stepUp) lines.push(status('arrowUp', `Siguiente reto: ${s.newParam} BPM`, 'accent'));
   }
-  if (s.stageUp) lines.push(h('p', { class: 'pr' }, '🚀 ¡Nueva etapa desbloqueada!'));
-  for (const b of s.badges || []) lines.push(h('p', { class: 'badge-new' }, `${b.icon} Insignia: ${b.name}`));
-  if (s.xp) lines.push(h('div', { class: 'xp-pop' }, `+${s.xp} XP`));
-  return h('div', { class: 'card result' }, h('div', { class: 'act-type' }, def.title), lines,
-    h('button', { class: 'btn primary big', onclick: onContinue }, 'Continuar →'));
+  if (s.stageUp) lines.push(status('route', 'Nueva etapa desbloqueada', 'ok'));
+  for (const b of s.badges || []) lines.push(status(b.icon, `Insignia: ${b.name}`, 'accent'));
+  return h('div', { class: 'card result' },
+    h('div', { class: 'eyebrow' }, def.title),
+    hero,
+    lines,
+    s.xp ? h('div', { class: 'xp' }, icon('sparkle', { size: 16 }), `+${s.xp} XP`) : null,
+    h('button', { class: 'btn primary big', onclick: onContinue }, 'Continuar', icon('arrowRight', { size: 18 })));
 }

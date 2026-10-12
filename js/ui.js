@@ -1,5 +1,6 @@
 // Utilidades de interfaz: creación de nodos y dibujos SVG (acordes, mástil, tablatura, gráficas).
 import { CHORDS, chordName, OPEN_MIDI, pcShort } from './music.js';
+import { icon } from './icons.js';
 
 export function h(tag, props, ...children) {
   const el = document.createElement(tag);
@@ -25,8 +26,8 @@ export function svgNode(markup) {
   return t.content.firstChild;
 }
 
-export function toast(msg, ms = 2600) {
-  const el = h('div', { class: 'toast' }, msg);
+export function toast(msg, iconName = 'check', ms = 2600) {
+  const el = h('div', { class: 'toast' }, icon(iconName, { size: 18 }), msg);
   document.body.append(el);
   requestAnimationFrame(() => el.classList.add('show'));
   setTimeout(() => { el.classList.remove('show'); setTimeout(() => el.remove(), 300); }, ms);
@@ -36,14 +37,19 @@ export function progressBar(frac, cls = '') {
   return h('div', { class: `bar ${cls}` }, h('div', { style: { width: `${Math.round(Math.max(0, Math.min(1, frac)) * 100)}%` } }));
 }
 
-export function ring(frac, label, size = 84) {
-  const r = size / 2 - 7;
-  const c = 2 * Math.PI * r;
-  const f = Math.max(0, Math.min(1, frac));
-  return svgNode(`<svg class="ring" viewBox="0 0 ${size} ${size}" width="${size}" height="${size}">
-    <circle cx="${size / 2}" cy="${size / 2}" r="${r}" class="ring-bg"/>
-    <circle cx="${size / 2}" cy="${size / 2}" r="${r}" class="ring-fg" stroke-dasharray="${c * f} ${c}" stroke-opacity="${f > 0 ? 1 : 0}" transform="rotate(-90 ${size / 2} ${size / 2})"/>
-    <text x="50%" y="54%" text-anchor="middle" dominant-baseline="middle" class="ring-txt">${label}</text></svg>`);
+/** Barra segmentada: `done` de `total` pasos. */
+export function steps(done, total) {
+  return h('div', { class: 'steps' }, Array.from({ length: total }, (_, i) => h('span', { class: i < done ? 'on' : '' })));
+}
+
+/** Tres estrellas, `n` llenas. */
+export function stars(n, size = 16) {
+  return h('span', { class: 'stars' }, [1, 2, 3].map((i) => icon('star', { size, cls: i <= n ? 'on' : 'off' })));
+}
+
+/** Fila de estado con icono: tone '' | 'ok' | 'accent' | 'muted'. */
+export function status(iconName, text, tone = '') {
+  return h('div', { class: `status ${tone}` }, icon(iconName, { size: 18 }), h('span', null, text));
 }
 
 // ─────────────── Diagrama de acorde ───────────────
@@ -163,11 +169,16 @@ export function sparkSvg(points, { target, lower = false, w = 280, hgt = 70 } = 
   return `${s}</svg>`;
 }
 
-/** "25 cambios/min", "80% a tiempo", "45 s", "★★★". */
+/** "25 cambios/min", "80% a tiempo", "45 s", "3 de 3 estrellas". */
 export function metricText(def, v) {
+  return metricParts(def, v).join(' ');
+}
+
+/** [valor, unidad] para mostrar la cifra grande separada de su unidad. */
+export function metricParts(def, v) {
   const { unit, label } = def.metric;
-  if (unit === '%') return `${Math.round(v)}% ${label.replace(/^% ?/, '')}`;
-  if (unit === 's') return `${Math.round(v)} s`;
-  if (unit === '★') return Math.round(v) ? '★'.repeat(Math.round(v)) : '0 ★';
-  return `${Math.round(v * 10) / 10} ${label}`;
+  if (unit === '%') return [`${Math.round(v)}%`, label.replace(/^% ?/, '')];
+  if (unit === 's') return [String(Math.round(v)), 'segundos'];
+  if (unit === '★') return [`${Math.round(v)} de 3`, 'estrellas'];
+  return [String(Math.round(v * 10) / 10), label];
 }

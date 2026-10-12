@@ -1,5 +1,6 @@
 // Teoría: preguntas rápidas de opción múltiple con explicación inmediata.
-import { h } from '../ui.js';
+import { h, steps } from '../ui.js';
+import { icon } from '../icons.js';
 import { makeQuiz } from '../theory.js';
 import { header } from './common.js';
 
@@ -13,7 +14,12 @@ export function mount(root, { def, onDone }) {
   function show() {
     const q = qs[i];
     const explain = h('div', { class: 'feedback' });
-    const nextBtn = h('button', { class: 'btn primary', style: { visibility: 'hidden' }, onclick: () => { i++; if (i < qs.length) show(); else end(); } }, i < qs.length - 1 ? 'Siguiente →' : 'Ver resultado');
+    const last = i === qs.length - 1;
+    const nextBtn = h('button', {
+      class: 'btn primary block',
+      style: { visibility: 'hidden' },
+      onclick: () => { i++; if (i < qs.length) show(); else end(); },
+    }, last ? 'Ver resultado' : 'Siguiente', icon('arrowRight', { size: 18 }));
     const opts = q.options.map((o, k) => h('button', {
       class: 'btn option',
       onclick: () => {
@@ -23,13 +29,14 @@ export function mount(root, { def, onDone }) {
         opts[k].classList.add(ok ? 'ok' : 'bad');
         opts[q.answer].classList.add('ok');
         explain.className = `feedback ${ok ? 'ok' : 'bad'}`;
-        explain.textContent = `${ok ? '✓ Correcto.' : '✗ No exactamente.'} ${q.explain}`;
+        explain.replaceChildren(icon(ok ? 'check' : 'close', { size: 18 }), h('span', null, h('b', null, ok ? 'Correcto. ' : 'No exactamente. '), q.explain));
         nextBtn.style.visibility = 'visible';
       },
     }, o));
     box.replaceChildren(
-      h('div', { class: 'score' }, `Pregunta ${i + 1} de ${qs.length}`),
-      h('div', { class: 'prompt' }, q.q),
+      h('div', { class: 'row between' }, h('span', { class: 'eyebrow' }, `Pregunta ${i + 1} de ${qs.length}`)),
+      h('div', { style: { margin: '8px 0 14px' } }, steps(i + 1, qs.length)),
+      h('div', { class: 'prompt', style: { textAlign: 'left', fontSize: '1.2rem' } }, q.q),
       h('div', { class: 'options' }, opts),
       explain,
       nextBtn);
@@ -38,8 +45,9 @@ export function mount(root, { def, onDone }) {
   function end() {
     const value = Math.round((correct / qs.length) * 100);
     box.replaceChildren(
-      h('div', { class: 'prompt' }, `${value}% correctas`),
-      h('p', { class: 'muted center' }, value >= def.metric.target ? 'Lo tienes. La próxima vez saldrán otras preguntas.' : 'Las preguntas cambian cada vez: repítelo en otra sesión.'),
+      h('div', { class: 'eyebrow' }, 'Resultado'),
+      h('div', { class: 'res-value' }, h('b', null, `${value}%`), h('span', null, 'correctas')),
+      h('p', { class: 'muted' }, value >= def.metric.target ? 'Lo tienes. La próxima vez saldrán otras preguntas.' : 'Las preguntas cambian cada vez: repítelo en otra sesión.'),
       h('button', { class: 'btn primary big', onclick: () => onDone({ value }) }, 'Guardar y seguir'));
   }
 

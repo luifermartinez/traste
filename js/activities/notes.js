@@ -1,8 +1,9 @@
 // "Caza la nota": la app pide una nota/posición y escucha si la tocas.
 import { h, svgNode, fretboardSvg } from '../ui.js';
+import { icon } from '../icons.js';
 import { OPEN_MIDI, pcName, pcShort, mod12, fretMidi } from '../music.js';
 import { NoteListener } from '../audio.js';
-import { header, errorBox, roundButtons, countdown, vibrate } from './common.js';
+import { header, errorBox, roundButtons, countdown, vibrate, startButton, setFeedback } from './common.js';
 
 const NATURAL = new Set([0, 2, 4, 5, 7, 9, 11]);
 const matches = (played, target) => played === target || Math.abs(played - target) === 12;
@@ -40,7 +41,7 @@ export function mount(root, { def, budgetSec = 90, onDone }) {
   const clock = h('div', { class: 'clock' });
   const score = h('div', { class: 'score' });
   const stage = h('div', { class: 'stage' }, h('div', { class: 'row between' }, clock, score), promptEl, subEl, fbEl, feedback);
-  const startBtn = h('button', { class: 'btn primary big', onclick: () => startRound() }, '▶ Empezar ronda');
+  const startBtn = startButton('Empezar ronda', () => startRound());
   const controls = h('div', { class: 'controls' }, startBtn);
   root.append(header(def), stage, controls);
 
@@ -80,8 +81,7 @@ export function mount(root, { def, budgetSec = 90, onDone }) {
       correct++;
       busy = true;
       vibrate(30);
-      feedback.textContent = `✓ ${pcName(target.midi)}`;
-      feedback.className = 'feedback ok';
+      setFeedback(feedback, 'ok', pcName(target.midi));
       drawBoard([{ s: target.s, f: target.f, cls: 'ok', label: pcShort(target.midi) }], [target.s]);
       updateScore();
       setTimeout(next, 650);
@@ -92,20 +92,23 @@ export function mount(root, { def, budgetSec = 90, onDone }) {
     updateScore();
     const onString = midi - OPEN_MIDI[target.s];
     const marks = onString >= 0 && onString <= to ? [{ s: target.s, f: onString, cls: 'bad', label: pcShort(midi) }] : [];
-    const dir = midi < target.midi ? 'más agudo: sube de traste →' : 'más grave: baja de traste ←';
-    feedback.className = 'feedback bad';
+    const dir = midi < target.midi ? 'más aguda: sube de traste' : 'más grave: baja de traste';
     if (attempts >= 3) {
       busy = true;
-      feedback.textContent = `Era aquí: cuerda ${target.s}, traste ${target.f}`;
+      setFeedback(feedback, 'bad', `Era aquí: cuerda ${target.s}, traste ${target.f}`);
       drawBoard([...marks, { s: target.s, f: target.f, cls: 'ok', label: pcShort(target.midi) }], [target.s]);
       setTimeout(next, 1800);
     } else {
-      feedback.textContent = `Sonó ${pcName(midi)}. Busca ${cfg.mode === 'open' ? 'otra cuerda' : dir}`;
+      setFeedback(feedback, 'bad', `Sonó ${pcName(midi)}. ${cfg.mode === 'open' ? 'Prueba otra cuerda' : `La buscada es ${dir}`}`);
       if (cfg.mode !== 'open') drawBoard(cfg.mode === 'pos' ? [{ s: target.s, f: target.f, cls: 'target', label: '?' }, ...marks] : marks, [target.s]);
     }
   }
 
-  function updateScore() { score.textContent = `✓ ${correct}  ✗ ${wrong}`; }
+  function updateScore() {
+    score.replaceChildren(
+      h('span', { class: 'ok' }, icon('check', { size: 16 }), correct),
+      h('span', { class: 'bad' }, icon('close', { size: 16 }), wrong));
+  }
 
   async function startRound() {
     controls.replaceChildren();
@@ -124,7 +127,7 @@ export function mount(root, { def, budgetSec = 90, onDone }) {
     next();
     timer = setInterval(() => {
       const left = Math.max(0, Math.ceil((endAt - performance.now()) / 1000));
-      clock.textContent = `⏱ ${left}s`;
+      clock.replaceChildren(icon('clock', { size: 16 }), `${left} s`);
       if (left <= 0) endRound();
     }, 200);
   }
@@ -139,8 +142,7 @@ export function mount(root, { def, budgetSec = 90, onDone }) {
     results.push({ value, acc });
     promptEl.textContent = `${value} aciertos/min`;
     subEl.textContent = `Precisión ${acc}% · ${correct} correctas, ${wrong} fallos`;
-    feedback.textContent = acc < 80 ? 'Consejo: más vale lento y seguro. Cada fallo resta medio punto.' : '';
-    feedback.className = 'feedback';
+    setFeedback(feedback, '', acc < 80 ? 'Más vale lento y seguro: cada fallo resta medio punto.' : '');
     controls.replaceChildren(roundButtons(startRound, finish));
   }
 

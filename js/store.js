@@ -207,22 +207,23 @@ export function levelInfo(xp = state.xp) {
 const maxOfType = (type) => Math.max(0, ...SKILLS.filter((s) => s.type === type).map((s) => bestFor(s) ?? 0));
 const anyHistory = (type, pred) => SKILLS.some((s) => s.type === type && skillState(s.id).history.some(pred));
 
+// `icon`: nombre de icono de icons.js.
 export const BADGES = [
-  { id: 'primera', icon: '🎸', name: 'Primera sesión', desc: 'Completaste tu primera sesión.', check: () => state.sessions.length >= 1 },
-  { id: 'semana', icon: '📅', name: 'Semana cumplida', desc: 'Cumpliste tu objetivo semanal.', check: () => streakWeeks() >= 1 },
-  { id: 'racha4', icon: '🔥', name: 'Un mes constante', desc: '4 semanas seguidas cumpliendo el objetivo.', check: () => streakWeeks() >= 4 },
-  { id: 'racha12', icon: '🌋', name: 'Hábito de hierro', desc: '12 semanas seguidas.', check: () => streakWeeks() >= 12 },
-  { id: 'horas5', icon: '⏱️', name: '5 horas tocando', desc: '300 minutos de práctica acumulada.', check: () => totalMinutes() >= 300 },
-  { id: 'records10', icon: '📈', name: 'Coleccionista de récords', desc: '10 récords personales.', check: () => state.prCount >= 10 },
-  { id: 'cambios30', icon: '🔁', name: 'Manos rápidas', desc: '30 cambios de acorde en un minuto.', check: () => maxOfType('changes') >= 30 },
-  { id: 'cambios60', icon: '⚡', name: 'Cambios relámpago', desc: '60 cambios en un minuto.', check: () => maxOfType('changes') >= 60 },
-  { id: 'afinador', icon: '🎯', name: 'Oído de afinador', desc: 'Afinaste las 6 cuerdas en menos de 45 s.', check: () => { const b = bestFor(SKILL_BY_ID.afinar); return b != null && b <= 45; } },
-  { id: 'oido90', icon: '👂', name: 'Oído fino', desc: '90% o más en un reto de oído.', check: () => maxOfType('ear') >= 90 },
-  { id: 'perfecta', icon: '✨', name: 'Melodía perfecta', desc: 'Una melodía completa sin errores.', check: () => anyHistory('melody', (h) => h.mistakes === 0) },
-  { id: 'metronomo', icon: '🥁', name: 'Reloj humano', desc: '95% a tiempo en un reto de ritmo.', check: () => maxOfType('rhythm') >= 95 },
-  { id: 'capsula', icon: '📼', name: 'Cápsula del tiempo', desc: 'Grabaste tu primera cápsula.', check: () => state.capsules >= 1 },
+  { id: 'primera', icon: 'pick', name: 'Primera sesión', desc: 'Completaste tu primera sesión.', check: () => state.sessions.length >= 1 },
+  { id: 'semana', icon: 'calendar', name: 'Semana cumplida', desc: 'Cumpliste tu objetivo semanal.', check: () => streakWeeks() >= 1 },
+  { id: 'racha4', icon: 'flame', name: 'Un mes constante', desc: '4 semanas seguidas cumpliendo el objetivo.', check: () => streakWeeks() >= 4 },
+  { id: 'racha12', icon: 'flame', name: 'Hábito de hierro', desc: '12 semanas seguidas.', check: () => streakWeeks() >= 12 },
+  { id: 'horas5', icon: 'clock', name: '5 horas tocando', desc: '300 minutos de práctica acumulada.', check: () => totalMinutes() >= 300 },
+  { id: 'records10', icon: 'trophy', name: 'Coleccionista de récords', desc: '10 récords personales.', check: () => state.prCount >= 10 },
+  { id: 'cambios30', icon: 'swap', name: 'Manos rápidas', desc: '30 cambios de acorde en un minuto.', check: () => maxOfType('changes') >= 30 },
+  { id: 'cambios60', icon: 'zap', name: 'Cambios relámpago', desc: '60 cambios en un minuto.', check: () => maxOfType('changes') >= 60 },
+  { id: 'afinador', icon: 'fork', name: 'Oído de afinador', desc: 'Afinaste las 6 cuerdas en menos de 45 s.', check: () => { const b = bestFor(SKILL_BY_ID.afinar); return b != null && b <= 45; } },
+  { id: 'oido90', icon: 'ear', name: 'Oído fino', desc: '90% o más en un reto de oído.', check: () => maxOfType('ear') >= 90 },
+  { id: 'perfecta', icon: 'sparkle', name: 'Melodía perfecta', desc: 'Una melodía completa sin errores.', check: () => anyHistory('melody', (h) => h.mistakes === 0) },
+  { id: 'metronomo', icon: 'metronome', name: 'Reloj humano', desc: '95% a tiempo en un reto de ritmo.', check: () => maxOfType('rhythm') >= 95 },
+  { id: 'capsula', icon: 'tape', name: 'Cápsula del tiempo', desc: 'Grabaste tu primera cápsula.', check: () => state.capsules >= 1 },
   ...STAGES.map((st) => ({
-    id: `etapa${st.n}`, icon: '🏅', name: `Etapa ${st.n} superada`, desc: st.title,
+    id: `etapa${st.n}`, icon: 'award', name: `Etapa ${st.n} superada`, desc: st.title,
     check: () => stageProgress(st.n) >= 0.8,
   })),
 ];

@@ -1,9 +1,10 @@
 // Ritmo: rasgueas un patrón con el metrónomo; la app mide cada golpe en milisegundos.
 import { h, chordCard } from '../ui.js';
+import { icon } from '../icons.js';
 import { PATTERNS } from '../music.js';
 import { acquireMic, releaseMic, onMicEvent, Metronome, calibrateLoopback, classifyStrums, audioCtx } from '../audio.js';
 import { state, save, currentParam } from '../store.js';
-import { header, errorBox, roundButtons, latency } from './common.js';
+import { header, errorBox, roundButtons, latency, startButton } from './common.js';
 
 const BARS = 4;
 const GOOD = 0.06;
@@ -62,12 +63,14 @@ export function mount(root, { def, onDone }) {
   });
   const grid = h('div', { class: 'rhythm-grid', style: { gridTemplateColumns: `repeat(${slots}, 1fr)` } }, cells);
   const status = h('div', { class: 'prompt' }, `${pat.name} · ${bpm} BPM`);
-  const sub = h('div', { class: 'prompt-sub muted' }, `Escucha 4 clics de cuenta SIN tocar y luego ${BARS} compases rasgueando el acorde. Con auriculares la medición es aún más precisa.`);
+  const sub = h('div', { class: 'prompt-sub' }, `Escucha 4 clics de cuenta sin tocar y luego ${BARS} compases rasgueando el acorde. Con auriculares la medición es aún más precisa.`);
   const dots = h('div', { class: 'hit-dots' });
-  const insight = h('div', { class: 'feedback' });
-  const stage = h('div', { class: 'stage' }, status, sub, grid, def.config.chord && h('div', { class: 'chord-row small' }, chordCard(def.config.chord)), dots, insight);
-  const controls = h('div', { class: 'controls' }, h('button', { class: 'btn primary big', onclick: () => startRound() }, '▶ Empezar'));
-  root.append(header(def), stage, controls);
+  const legend = h('div', { class: 'legend', hidden: true },
+    h('span', null, h('i', { class: 'dot good' }), 'justo'), h('span', null, h('i', { class: 'dot close' }), 'cerca'), h('span', null, h('i', { class: 'dot miss' }), 'perdido'));
+  const insight = h('div');
+  const stage = h('div', { class: 'stage' }, status, sub, grid, def.config.chord && h('div', { class: 'chord-row small' }, chordCard(def.config.chord)), dots, legend);
+  const controls = h('div', { class: 'controls' }, startButton('Empezar', () => startRound()));
+  root.append(header(def), stage, insight, controls);
 
   async function ensureMic() {
     if (micHeld) return;
@@ -75,7 +78,7 @@ export function mount(root, { def, onDone }) {
     if (disposed) { releaseMic(); throw new Error('cerrado'); }
     micHeld = true;
     if (state.settings.latency == null && !state.settings.autoCalibrationFailed) {
-      status.textContent = '🔧 Calibrando latencia…';
+      status.textContent = 'Calibrando latencia…';
       sub.textContent = 'Silencio 4 segundos: la app escucha sus propios clics para medir el retardo de tu dispositivo.';
       const lat = await calibrateLoopback();
       if (lat != null) {
@@ -99,7 +102,8 @@ export function mount(root, { def, onDone }) {
       return;
     }
     dots.replaceChildren();
-    insight.textContent = '';
+    legend.hidden = true;
+    insight.replaceChildren();
     const onsets = [];
     offMic = onMicEvent((e) => { if (e.type === 'onset' && e.band === 'strum') onsets.push(e); });
     const beat = 60 / bpm;
@@ -146,17 +150,18 @@ export function mount(root, { def, onDone }) {
     status.textContent = `${r.score}% a tiempo`;
     sub.textContent = `${r.hits.filter((x) => x.cls === 'good').length} justos · ${r.hits.filter((x) => x.cls === 'close' || x.cls === 'late').length} cerca · ${r.hits.filter((x) => x.cls === 'miss').length} perdidos`;
     dots.replaceChildren(...r.hits.map((x) => h('span', { class: `dot ${x.cls}`, title: x.err == null ? 'sin golpe' : `${Math.round(x.err * 1000)} ms` })));
+    legend.hidden = false;
     const tips = [];
     const ms = Math.round(r.bias * 1000);
-    if (Math.abs(ms) >= 25) tips.push(ms < 0 ? `🕵️ Tiendes a ADELANTARTE ~${-ms} ms. Escucha el clic y espera a que suene.` : `🕵️ Tiendes a ATRASARTE ~${ms} ms. Anticipa el movimiento de la mano.`);
-    else if (r.score >= 50) tips.push('🕵️ Tu pulso está centrado: ni adelantado ni atrasado.');
-    if (r.extras > expected.length * 0.25) tips.push('Detecté golpes de más: en los huecos la mano se mueve pero NO toca las cuerdas.');
+    if (Math.abs(ms) >= 25) tips.push(ms < 0 ? `Tiendes a adelantarte unos ${-ms} ms. Escucha el clic y espera a que suene.` : `Tiendes a atrasarte unos ${ms} ms. Anticipa el movimiento de la mano.`);
+    else if (r.score >= 50) tips.push('Tu pulso está centrado: ni adelantado ni atrasado.');
+    if (r.extras > expected.length * 0.25) tips.push('Detecté golpes de más: en los huecos la mano se mueve pero no toca las cuerdas.');
     if (r.hits.filter((x) => x.cls === 'miss').length > expected.length / 2) {
       tips.push(clickHeard
         ? 'El micrófono oye mucho el clic: usa auriculares o baja el volumen del clic (Ajustes) y acerca el móvil a la guitarra.'
         : 'Si no te detecta, acerca el móvil a la guitarra o sube la sensibilidad en Ajustes.');
     }
-    insight.textContent = tips.join(' ');
+    insight.replaceChildren(...tips.map((t) => h('div', { class: 'tip' }, icon('search', { size: 18 }), h('span', null, t))));
     controls.replaceChildren(roundButtons(startRound, () => {
       const best = results.reduce((a, x) => (x.score > a.score ? x : a));
       onDone({ value: best.score, extra: { bias: Math.round(best.bias * 1000) } });

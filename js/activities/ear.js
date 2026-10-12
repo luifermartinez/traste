@@ -1,8 +1,9 @@
 // Oído: la app toca una nota y tienes que encontrarla en la guitarra.
 import { h, svgNode, fretboardSvg } from '../ui.js';
+import { icon } from '../icons.js';
 import { pcName, pcShort, positionsOf, mod12, pick } from '../music.js';
 import { NoteListener, playNote, now } from '../audio.js';
-import { header, errorBox, roundButtons, vibrate } from './common.js';
+import { header, errorBox, roundButtons, vibrate, startButton, setFeedback } from './common.js';
 
 const ROUNDS = 8;
 
@@ -16,15 +17,15 @@ export function mount(root, { def, onDone }) {
   let firstTry = 0;
   let busy = false;
 
-  const prompt = h('div', { class: 'prompt' }, '👂 Escucha y encuéntrala');
-  const sub = h('div', { class: 'prompt-sub muted' }, `Pista: ${hint}. Vale cualquier octava.`);
+  const prompt = h('div', { class: 'prompt' }, 'Escucha y encuéntrala');
+  const sub = h('div', { class: 'prompt-sub' }, `Pista: ${hint}. Vale cualquier octava.`);
   const feedback = h('div', { class: 'feedback' });
   const fbEl = h('div', { class: 'fb-wrap' });
-  const progressEl = h('div', { class: 'score' });
-  const replay = h('button', { class: 'btn', onclick: () => play() }, '🔁 Repetir sonido');
+  const progressEl = h('div', { class: 'eyebrow center', style: { display: 'block' } });
+  const replay = h('button', { class: 'btn', onclick: () => play() }, icon('refresh', { size: 18 }), 'Repetir sonido');
   const giveUp = h('button', { class: 'btn ghost', onclick: () => reveal() }, 'Me rindo');
-  const stage = h('div', { class: 'stage' }, progressEl, prompt, sub, h('div', { class: 'row gap center' }, replay, giveUp), feedback, fbEl);
-  const controls = h('div', { class: 'controls' }, h('button', { class: 'btn primary big', onclick: () => startRound() }, '▶ Empezar'));
+  const stage = h('div', { class: 'stage' }, progressEl, prompt, sub, h('div', { class: 'btn-row', style: { marginTop: '16px' } }, replay, giveUp), feedback, fbEl);
+  const controls = h('div', { class: 'controls' }, startButton('Empezar', () => startRound()));
   root.append(header(def), stage, controls);
 
   const maxFret = 9;
@@ -48,9 +49,8 @@ export function mount(root, { def, onDone }) {
     let t;
     do { t = pick(pool); } while (pool.length > 1 && t === target);
     target = t;
-    progressEl.textContent = `Nota ${round} de ${ROUNDS} · ✓ ${firstTry}`;
-    feedback.textContent = '';
-    feedback.className = 'feedback';
+    progressEl.textContent = `Nota ${round} de ${ROUNDS} · ${firstTry} a la primera`;
+    setFeedback(feedback, '', '');
     fbEl.replaceChildren();
     play();
   }
@@ -58,8 +58,7 @@ export function mount(root, { def, onDone }) {
   function reveal() {
     if (!target || busy) return;
     busy = true;
-    feedback.className = 'feedback bad';
-    feedback.textContent = `Era ${pcName(target)}`;
+    setFeedback(feedback, 'bad', `Era ${pcName(target)}`);
     showPositions('ok');
     play();
     setTimeout(next, 2600);
@@ -71,17 +70,15 @@ export function mount(root, { def, onDone }) {
       busy = true;
       if (attempts === 0) firstTry++;
       vibrate(30);
-      feedback.className = 'feedback ok';
-      feedback.textContent = `✓ ¡${pcName(target)}!${attempts === 0 ? ' A la primera.' : ''}`;
+      setFeedback(feedback, 'ok', `${pcName(target)}${attempts === 0 ? ', a la primera' : ''}`);
       showPositions('ok');
       setTimeout(next, 1500);
       return;
     }
     attempts++;
     const diff = midi - target;
-    const dir = Math.abs(diff) < 12 ? (diff > 0 ? 'más grave ↓' : 'más aguda ↑') : 'prueba en otra octava';
-    feedback.className = 'feedback bad';
-    feedback.textContent = `Sonó ${pcName(midi)}. La nota buscada es ${dir}`;
+    const dir = Math.abs(diff) < 12 ? (diff > 0 ? 'más grave' : 'más aguda') : 'en otra octava';
+    setFeedback(feedback, 'bad', `Sonó ${pcName(midi)}. La buscada es ${dir}`);
     if (attempts >= 4) reveal();
   }
 
@@ -107,8 +104,7 @@ export function mount(root, { def, onDone }) {
     const value = Math.round((firstTry / ROUNDS) * 100);
     results.push(value);
     prompt.textContent = `${value}% al primer intento`;
-    feedback.textContent = value >= 70 ? 'Tu oído está conectando con el mástil.' : 'Canta la nota antes de buscarla: si la puedes cantar, la encuentras antes.';
-    feedback.className = 'feedback';
+    setFeedback(feedback, '', value >= 70 ? 'Tu oído está conectando con el mástil.' : 'Canta la nota antes de buscarla: si la puedes cantar, la encuentras antes.');
     controls.replaceChildren(roundButtons(startRound, () => onDone({ value: Math.max(...results) })));
   }
 

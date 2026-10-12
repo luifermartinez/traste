@@ -1,4 +1,4 @@
-# 🎸 Traste — tu sistema personal para aprender guitarra
+# Traste — tu sistema personal para aprender guitarra
 
 Web app (PWA) que funciona en el móvil y en el PC, sin servidor ni cuentas. Escucha tu guitarra por el micrófono, te dice qué practicar cada día y mide tu progreso con números reales.
 
