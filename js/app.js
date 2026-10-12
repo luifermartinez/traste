@@ -32,7 +32,7 @@ const mmss = (sec) => `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0
 const MIN_SESSION_SEC = 120;
 const topBar = (title, back, { settings = true } = {}) => h('header', { class: 'top' },
   back && h('a', { href: back, class: 'icon-btn', 'aria-label': 'Volver', style: { marginLeft: '-10px' } }, icon('back', { size: 22 })),
-  title ? h('h1', null, title) : h('div', { class: 'brand', style: { flex: 1 } }, icon('pick', { size: 22 }), 'Traste'),
+  title ? h('h1', null, title) : h('div', { class: 'brand' }, icon('pick', { size: 24 }), h('div', null, h('b', null, 'Traste'), h('small', { style: { display: 'block' } }, 'Sala de ensayo'))),
   settings && h('a', { href: '#/ajustes', class: 'icon-btn', 'aria-label': 'Ajustes', style: { marginRight: '-10px' } }, icon('sliders', { size: 21 })));
 
 function render() {
@@ -134,21 +134,34 @@ function viewToday(root) {
         : `Te ${goal - done === 1 ? 'falta' : 'faltan'} ${plural(goal - done, 'sesión', 'sesiones')} para tu objetivo semanal.`;
 
   let minutes = state.settings.minutes;
-  const options = [[5, 'exprés'], [10, ''], [15, ''], [20, '']];
-  const planEl = h('ol', { class: 'plan' });
+  // Perilla: cada duración es una posición del dial (grados).
+  const DIAL = [[5, -120], [10, -40], [15, 40], [20, 120]];
+  if (!DIAL.some(([m]) => m === minutes)) minutes = 10;
+  const knob = h('button', { class: 'knob', 'aria-label': 'Cambiar duración', onclick: () => setMinutes(DIAL[(DIAL.findIndex(([m]) => m === minutes) + 1) % DIAL.length][0]) });
+  const labels = DIAL.map(([m, deg]) => {
+    const rad = (deg * Math.PI) / 180;
+    return h('button', {
+      class: 'knob-label', style: { left: `${66 + 52 * Math.sin(rad)}px`, top: `${63 - 52 * Math.cos(rad)}px` }, onclick: () => setMinutes(m),
+    }, m);
+  });
+  const caption = h('div', { class: 'knob-caption' });
+  const setlist = h('ol');
   const noteEl = h('div');
-  const seg = h('div', { class: 'seg' }, options.map(([m, sub]) => h('button', {
-    onclick: () => { minutes = m; state.settings.minutes = m; save(); paint(); },
-  }, `${m} min`, sub && h('small', null, sub))));
+  const dateLabel = new Date().toLocaleDateString('es', { weekday: 'short', day: 'numeric', month: 'short' });
+  function setMinutes(m) { minutes = m; state.settings.minutes = m; save(); paint(); }
   function paint() {
-    [...seg.children].forEach((c, i) => c.classList.toggle('on', options[i][0] === minutes));
+    const i = DIAL.findIndex(([m]) => m === minutes);
+    knob.style.setProperty('--rot', `${DIAL[i][1]}deg`);
+    labels.forEach((l, k) => l.classList.toggle('on', k === i));
     const blocks = previewSession(minutes);
-    planEl.replaceChildren(...blocks.map((b, i) => h('li', null,
-      h('span', { class: 'n' }, i + 1),
-      h('div', { class: 't' }, h('span', { class: 'eyebrow' }, ROLE_LABEL[b.role]), h('b', null, b.def.title)),
+    caption.replaceChildren(h('span', { class: 'eyebrow' }, 'Duración'), h('b', null, `${minutes} min`),
+      h('p', null, minutes === 5 ? 'Exprés: también cuenta para tu semana.' : `${plural(blocks.length, 'bloque')} · gira la perilla para cambiar`));
+    setlist.replaceChildren(...blocks.map((b, k) => h('li', null,
+      h('span', { class: 'n' }, String(k + 1).padStart(2, '0')),
+      h('div', { class: 't' }, h('b', null, b.def.title), h('span', null, ROLE_LABEL[b.role])),
       icon(TYPE_ICON[b.def.type], { size: 18 }))));
     noteEl.replaceChildren(...(blocks.some((b) => b.role === 'lesson')
-      ? [h('div', { class: 'note' }, icon('info', { size: 16 }), 'Después de cada lección, la sesión sigue con la práctica que esa lección desbloquea.')] : []));
+      ? [h('div', { class: 'setlist-note' }, 'Tras cada lección, la sesión sigue con la práctica que desbloquea.')] : []));
   }
   paint();
 
@@ -159,28 +172,31 @@ function viewToday(root) {
 
   root.append(...[
     topBar(),
-    h('div', { style: { margin: '8px 0 18px' } }, h('h1', null, greeting), h('p', { class: 'muted', style: { margin: '4px 0 0' } }, weekMsg)),
+    h('div', { class: 'greet' }, h('h1', null, greeting), h('p', null, weekMsg)),
+    h('div', { class: 'card amp screws' },
+      h('div', { class: 'eyebrow', style: { textAlign: 'center' } }, 'Esta semana'),
+      h('div', { class: 'amp-row', style: { marginTop: '12px' } },
+        h('div', { class: 'big-num' }, `${done}`, h('small', null, `de ${goal}`)),
+        h('div', { class: 'lamps', 'aria-label': `${done} de ${goal} sesiones` }, Array.from({ length: goal }, (_, k) => h('span', { class: `lamp ${k < done ? 'on' : ''}` })))),
+      h('div', { class: 'grille' }),
+      h('div', { class: 'amp-meta' },
+        h('span', { class: streak ? 'hot' : '' }, icon('flame', { size: 14 }), streak ? `Racha ${streak} sem` : 'Sin racha'),
+        h('span', null, `Nivel ${lv.level} · ${lv.into}/${lv.need}`))),
     h('div', { class: 'card' },
-      h('div', { class: 'eyebrow' }, 'Esta semana'),
-      h('div', { class: 'week-big num' }, `${done}`, h('small', null, `de ${goal} sesiones`)),
-      h('div', { style: { marginTop: '14px' } }, steps(done, goal)),
-      h('div', { class: 'meta-row' },
-        h('span', { class: `row ${streak ? 'streak-on' : ''}` }, icon('flame', { size: 16 }), streak ? `${plural(streak, 'semana')} de racha` : 'Sin racha aún'),
-        h('span', { class: 'num' }, `Nivel ${lv.level} · ${lv.into}/${lv.need} XP`))),
-    h('div', { class: 'card' },
-      h('div', { class: 'card-head' }, h('h3', { style: { margin: 0 } }, 'Sesión de hoy'), h('span', { class: 'muted small' }, lv.title)),
-      seg,
-      planEl,
-      noteEl,
+      h('div', { class: 'knob-row' }, h('div', { class: 'knob-box' }, knob, labels), caption),
+      h('div', { class: 'setlist' },
+        h('div', { class: 'setlist-head' }, h('b', null, 'Setlist'), h('span', null, dateLabel)),
+        setlist,
+        noteEl),
       h('button', { class: 'btn primary big', onclick: () => startSession(minutes) }, icon('play', { size: 18 }), 'Empezar sesión')),
     insights(),
     capsuleDue && h('a', { class: 'card tool', href: '#/tool/capsula' },
       h('span', { class: 'tool-icon' }, icon('tape', { size: 22 })),
-      h('div', { class: 'body' }, h('strong', null, 'Graba tu cápsula del tiempo'),
+      h('div', { class: 'body' }, h('strong', null, 'Graba tu cápsula'),
         h('p', { class: 'muted small' }, '30 segundos tocando lo que sepas. En un mes oirás la diferencia que no notas día a día.')),
       icon('chevron', { size: 18 })),
     h('a', { class: 'card', href: '#/ruta' },
-      h('div', { class: 'card-head', style: { marginBottom: '4px' } }, h('span', { class: 'eyebrow' }, `Etapa ${stage.n} de ${STAGES.length}`), h('span', { class: 'muted small num' }, `${Math.round(sp * 100)}%`)),
+      h('div', { class: 'card-head', style: { marginBottom: '6px' } }, h('span', { class: 'eyebrow accent' }, `Etapa ${stage.n} de ${STAGES.length}`), h('span', { class: 'eyebrow' }, `${Math.round(sp * 100)}%`)),
       h('h3', null, stage.title),
       h('p', { class: 'muted small', style: { margin: '0 0 14px' } }, stage.goal),
       progressBar(sp)),
@@ -334,30 +350,35 @@ function skillRow(d) {
 
 function viewPath(root) {
   root.append(topBar('Ruta'),
-    h('p', { class: 'muted', style: { marginTop: 0 } }, 'Cada habilidad tiene un objetivo medible. Al superar el 80% de una etapa y sus lecciones se abre la siguiente. Toca una habilidad para practicarla cuando quieras.'));
+    h('p', { class: 'muted', style: { marginTop: 0 } }, 'Seis etapas, de la primera cuerda al jazz. Cada habilidad tiene un objetivo medible; al superar el 80% de una etapa se abre la siguiente.'));
   const cur = currentStage();
+  const route = h('div', { class: 'route' });
   for (const st of STAGES) {
     const unlocked = st.n <= state.unlockedStage;
     const p = stageProgress(st.n);
-    const card = h('details', { class: `stage-card ${unlocked ? '' : 'locked'}`, open: st.n === cur },
+    const state_ = !unlocked ? 'locked' : st.n === cur ? 'current' : p >= 0.8 ? 'done' : '';
+    const card = h('details', { class: `stage-card ${state_}`, open: st.n === cur },
       h('summary', null,
-        h('div', { class: 'card-head', style: { marginBottom: '2px' } },
-          h('span', { class: `eyebrow ${st.n === cur ? 'accent' : ''}` }, `Etapa ${st.n}`),
-          h('span', { class: 'muted small num' }, unlocked ? `${Math.round(p * 100)}%` : icon('lock', { size: 16 }))),
-        h('h3', { style: { margin: '2px 0 4px', fontSize: '1.08rem' } }, st.title),
-        h('p', { class: 'muted small', style: { margin: 0 } }, st.goal),
-        unlocked && progressBar(p)));
+        h('span', { class: 'stage-num' }, String(st.n).padStart(2, '0')),
+        h('div', { class: 'panel' },
+          h('div', { class: 'card-head', style: { marginBottom: '6px' } },
+            h('span', { class: `eyebrow ${st.n === cur ? 'accent' : ''}` }, st.n === cur ? 'Estás aquí' : unlocked ? `Etapa ${st.n}` : 'Bloqueada'),
+            unlocked ? h('span', { class: 'eyebrow' }, `${Math.round(p * 100)}%`) : icon('lock', { size: 15 })),
+          h('h3', { style: { margin: '0 0 6px' } }, st.title),
+          h('p', { class: 'muted small', style: { margin: 0 } }, st.goal),
+          unlocked && progressBar(p))));
     if (unlocked) card.append(h('div', { class: 'skills' }, stageSkills(st.n).map(skillRow)));
     else {
       card.append(h('button', {
-        class: 'btn small unlock',
+        class: 'btn small block unlock',
         onclick: () => {
           if (confirm(`¿Ya dominas lo anterior? Se abrirán las etapas hasta la ${st.n}.`)) { unlockStage(st.n); render(); }
         },
       }, 'Ya sé esto: abrir etapa'));
     }
-    root.append(card);
+    route.append(card);
   }
+  root.append(route);
 }
 
 // ─────────────── Progreso ───────────────
