@@ -44,6 +44,8 @@ Las habilidades de ritmo y de tocar con la banda tienen una **escalera de tempo*
 
 Una etapa se abre al superar el 80% de la anterior (y todas sus lecciones). Si ya sabes algo, en **Ruta** puedes abrir una etapa directamente.
 
+Cada etapa es un calibre de púa con su color (.50 rojo, .60 naranja, .73 amarillo, .88 verde, 1.0 azul, 1.14 morado): la app entera toma el color de la etapa en la que estás.
+
 ### 4. Constancia sin culpa
 - La **racha cuenta semanas**, no días: cumple tu objetivo semanal (3 por defecto) y la racha sigue.
 - Una sesión cuenta si es completa o dura al menos 2 minutos. La exprés de 5 min cuenta.
@@ -114,12 +116,14 @@ y abre `http://localhost:3000` (o `:8000`). En el móvil por la IP de tu red **n
 - **Acordes** (diagramas): `CHORDS` en `js/music.js`.
 - **Patrones de rasgueo**: `PATTERNS` en `js/music.js`.
 - **Cómo se arma cada sesión**: `js/session.js`.
+- **Aspecto** (colores de calibre, tipografía, componentes): `styles.css`; las reglas del diseño están en `DESIGN.md`.
 
 Si añades archivos nuevos, agrégalos también a la lista `FILES` de `sw.js` para que funcionen sin conexión.
 
 ## Estructura
 ```
-index.html, styles.css, manifest.webmanifest, sw.js, icons/
+index.html, styles.css, manifest.webmanifest, sw.js, icons/, fonts/ (Rubik, OFL)
+PRODUCT.md, DESIGN.md  para quién es y reglas del diseño
 js/app.js           vistas (Hoy, Ruta, Progreso, Herramientas, Ajustes) y ejecutor de sesión
 js/session.js       generador adaptativo de la sesión diaria
 js/store.js         progreso, XP, rachas, insignias (localStorage)

@@ -34,9 +34,8 @@ export function mount(root, { def, onDone }) {
       },
     }, o));
     box.replaceChildren(
-      h('div', { class: 'row between' }, h('span', { class: 'eyebrow' }, `Pregunta ${i + 1} de ${qs.length}`)),
-      h('div', { style: { margin: '8px 0 14px' } }, steps(i + 1, qs.length)),
-      h('div', { class: 'prompt', style: { textAlign: 'left', fontSize: '1.2rem' } }, q.q),
+      h('div', { class: 'quiz-progress' }, steps(i + 1, qs.length), h('span', { class: 'muted small num' }, `${i + 1} de ${qs.length}`)),
+      h('div', { class: 'prompt' }, q.q),
       h('div', { class: 'options' }, opts),
       explain,
       nextBtn);
@@ -45,7 +44,7 @@ export function mount(root, { def, onDone }) {
   function end() {
     const value = Math.round((correct / qs.length) * 100);
     box.replaceChildren(
-      h('div', { class: 'eyebrow' }, 'Resultado'),
+      h('h3', null, 'Resultado'),
       h('div', { class: 'res-value' }, h('b', null, `${value}%`), h('span', null, 'correctas')),
       h('p', { class: 'muted' }, value >= def.metric.target ? 'Lo tienes. La próxima vez saldrán otras preguntas.' : 'Las preguntas cambian cada vez: repítelo en otra sesión.'),
       h('button', { class: 'btn primary big', onclick: () => onDone({ value }) }, 'Guardar y seguir'));

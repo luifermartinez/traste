@@ -1,0 +1,109 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-11T23:30:00Z",
+  "title": "Design System: Traste",
+  "extensions": {
+    "colorMeta": {
+      "gauge-050-red": { "role": "primary", "displayName": "Calibre .50", "canonical": "#c8392a", "tonalRamp": ["#3a110c", "#5e1b13", "#82251a", "#a32c1f", "#c8392a", "#d9665a", "#e8988f", "#f5cdc8"] },
+      "gauge-060-orange": { "role": "primary", "displayName": "Calibre .60", "canonical": "#e2762b", "tonalRamp": ["#3d1d07", "#62300d", "#874313", "#b85a19", "#e2762b", "#ea965c", "#f2b88e", "#f9dbc5"] },
+      "gauge-073-yellow": { "role": "primary", "displayName": "Calibre .73", "canonical": "#ebbd2c", "tonalRamp": ["#3d2f06", "#634c0a", "#8a6a0f", "#c0951a", "#ebbd2c", "#f0cd5f", "#f5dd91", "#faeec6"] },
+      "gauge-088-green": { "role": "primary", "displayName": "Calibre .88", "canonical": "#33804a", "tonalRamp": ["#0e2414", "#163a20", "#1f502c", "#25633a", "#33804a", "#5c9e6f", "#91c09e", "#c7e0cd"] },
+      "gauge-100-blue": { "role": "primary", "displayName": "Calibre 1.0", "canonical": "#2d5da6", "tonalRamp": ["#0c1a2f", "#13294b", "#1a3866", "#214783", "#2d5da6", "#5a82bf", "#8fabd6", "#c6d5ec"] },
+      "gauge-114-purple": { "role": "primary", "displayName": "Calibre 1.14", "canonical": "#6b3f92", "tonalRamp": ["#1d1128", "#2f1b40", "#412558", "#522f71", "#6b3f92", "#8d68ae", "#b298ca", "#d8cbe5"] },
+      "ground": { "role": "neutral", "displayName": "Suelo", "canonical": "#eeeeeb" },
+      "surface": { "role": "neutral", "displayName": "Superficie", "canonical": "#ffffff" },
+      "ink": { "role": "neutral", "displayName": "Tinta", "canonical": "#1b1b1a" }
+    },
+    "typographyMeta": {
+      "stage": { "displayName": "Etapa", "purpose": "Nombre de la etapa en el campo de color de Hoy." },
+      "number": { "displayName": "Cifra", "purpose": "Resultados, contador de cambios y BPM; numerales tabulares." }
+    },
+    "shadows": [
+      { "name": "surface", "value": "0 1px 2px rgba(27,27,26,.06), 0 6px 18px -10px rgba(27,27,26,.18)", "purpose": "Listas, tarjetas y encabezados de etapa en tema claro." }
+    ],
+    "motion": [
+      { "name": "state", "value": "150ms–250ms ease", "purpose": "Cambios de estado de botones, segmentos, barras y medidor del afinador." }
+    ],
+    "breakpoints": [
+      { "name": "column", "value": "600px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Acción principal de la pantalla, en el color del calibre actual.",
+      "html": "<button class=\"ds-btn-primary\"><svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\"><path d=\"M8 5.5v13l10.5-6.5z\" fill=\"currentColor\"/></svg>Empezar sesión</button>",
+      "css": ".ds-btn-primary{display:inline-flex;align-items:center;gap:8px;min-height:56px;padding:0 24px;border-radius:14px;border:0;background:#c8392a;color:#fff;font:600 1.05rem Rubik,system-ui,sans-serif;cursor:pointer;transition:background .15s}.ds-btn-primary:hover{background:#a32c1f}.ds-btn-primary:focus-visible{outline:3px solid rgba(200,57,42,.55);outline-offset:2px}"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Acciones secundarias: otra ronda, repetir sonido.",
+      "html": "<button class=\"ds-btn\">Otra ronda</button>",
+      "css": ".ds-btn{min-height:48px;padding:0 18px;border-radius:12px;border:1px solid #c9c8c2;background:#fff;color:#1b1b1a;font:500 1rem Rubik,system-ui,sans-serif;cursor:pointer;transition:background .15s}.ds-btn:hover{background:#f5f5f2}.ds-btn:focus-visible{outline:3px solid rgba(200,57,42,.55);outline-offset:2px}"
+    },
+    {
+      "name": "Segmented control",
+      "kind": "chip",
+      "refersTo": "segmented",
+      "description": "Duración de la sesión, compás, objetivo semanal.",
+      "html": "<div class=\"ds-seg\"><button>5 min</button><button class=\"on\">10 min</button><button>15 min</button><button>20 min</button></div>",
+      "css": ".ds-seg{display:flex;gap:2px;padding:3px;background:#f5f5f2;border-radius:12px;box-shadow:inset 0 0 0 1px #e0dfda;font-family:Rubik,system-ui,sans-serif}.ds-seg button{flex:1;border:0;background:transparent;color:#64635d;padding:9px 4px;border-radius:9px;font-weight:500;cursor:pointer}.ds-seg button.on{background:#fff;color:#1b1b1a;font-weight:600;box-shadow:0 1px 3px rgba(0,0,0,.12)}.ds-seg button:hover{color:#1b1b1a}"
+    },
+    {
+      "name": "Session list",
+      "kind": "card",
+      "refersTo": "list",
+      "description": "Bloques de la sesión del día con su paso, rol y duración.",
+      "html": "<div class=\"ds-list\"><div class=\"ds-row\"><span class=\"ds-n next\">1</span><div><b>Afinar rápido</b><span>Afina · Afinador</span></div><em>1 min</em></div><div class=\"ds-row\"><span class=\"ds-n\">2</span><div><b>Cambios Mim ↔ Lam</b><span>Foco · Cambios</span></div><em>4 min</em></div></div>",
+      "css": ".ds-list{background:#fff;border-radius:16px;box-shadow:0 1px 2px rgba(27,27,26,.06),0 6px 18px -10px rgba(27,27,26,.18);font-family:Rubik,system-ui,sans-serif;overflow:hidden}.ds-row{display:flex;align-items:center;gap:14px;padding:13px 16px;min-height:56px}.ds-row+.ds-row{border-top:1px solid #e0dfda}.ds-row div{flex:1}.ds-row b{display:block;font-weight:500;color:#1b1b1a}.ds-row span{font-size:.85rem;color:#64635d}.ds-row em{font-style:normal;font-size:.875rem;color:#64635d}.ds-n{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;background:#f5f5f2;color:#64635d;font-weight:600;font-size:.85rem}.ds-n.next{background:#c8392a;color:#fff}"
+    },
+    {
+      "name": "Navigation bar",
+      "kind": "nav",
+      "description": "Pestañas inferiores; la activa en el color del calibre.",
+      "html": "<nav class=\"ds-tabs\"><a class=\"on\"><svg width=\"22\" height=\"22\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\"><path d=\"M3.5 10.5 12 3.5l8.5 7\"/><path d=\"M5.5 9v11h4.5v-6h4v6h4.5V9\"/></svg>Hoy</a><a><svg width=\"22\" height=\"22\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\"><path d=\"M4 4v16h16\"/><path d=\"m7.5 15 3.5-4 3 3 5-6.5\"/></svg>Progreso</a></nav>",
+      "css": ".ds-tabs{display:flex;background:#fff;border-top:1px solid #e0dfda;padding:6px 8px;font-family:Rubik,system-ui,sans-serif}.ds-tabs a{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;color:#64635d;font-size:.72rem;font-weight:500;cursor:pointer}.ds-tabs a.on{color:#a32c1f}.ds-tabs a:hover{color:#1b1b1a}"
+    },
+    {
+      "name": "Pick stamp",
+      "kind": "custom",
+      "description": "La púa del calibre con su grosor estampado: firma visual de Hoy y la Ruta.",
+      "html": "<svg class=\"ds-pick\" width=\"80\" height=\"88\" viewBox=\"0 0 100 110\"><path d=\"M50 3C86 3 97 21 97 40C97 67 68 93 50 107C32 93 3 67 3 40C3 21 14 3 50 3Z\"/><text x=\"50\" y=\"50\" text-anchor=\"middle\" class=\"g\">.50</text><text x=\"50\" y=\"66\" text-anchor=\"middle\" class=\"u\">mm</text></svg>",
+      "css": ".ds-pick path{fill:#c8392a}.ds-pick text{fill:#fff;font-family:Rubik,system-ui,sans-serif}.ds-pick .g{font-size:26px;font-weight:700}.ds-pick .u{font-size:12px;font-weight:500}"
+    }
+  ],
+  "narrative": {
+    "northStar": "Calibre",
+    "overview": "Las púas Tortex tienen un color por grosor: .50 rojo, .60 naranja, .73 amarillo, .88 verde, 1.0 azul, 1.14 morado. Traste tiene seis etapas, así que cada etapa es un calibre y la app entera toma el color de la púa que has alcanzado. Avanzar es literalmente cambiar de color. Es una app de práctica: se lee a medio metro con la guitarra en las manos. El mundo solo aporta color, una tipografía redondeada y un gesto propio (la púa estampada con su calibre); la navegación, las listas y los controles son los estándar.",
+    "keyCharacteristics": [
+      "Un solo calibre de color por pantalla, ocupando regiones enteras.",
+      "Suelo neutro plano; tema claro u oscuro según el sistema.",
+      "Una sola familia tipográfica, Rubik, de 400 a 700.",
+      "La púa estampada es la única ilustración."
+    ],
+    "rules": [
+      { "name": "The One Gauge Rule", "body": "Cada pantalla usa un único calibre. Los seis solo aparecen juntos en la fila de púas de la Ruta.", "section": "colors" },
+      { "name": "The Whole Region Rule", "body": "El calibre llena regiones (el campo de Hoy, un botón, una barra), no se reparte en acentos sueltos.", "section": "colors" },
+      { "name": "The No Kicker Rule", "body": "Nada encima de un título: el tipo de ejercicio, la etapa o el progreso van debajo o al lado.", "section": "typography" },
+      { "name": "The Real Case Rule", "body": "Nada en mayúsculas forzadas: en los acordes \"Em\" no es \"EM\".", "section": "typography" },
+      { "name": "The Flat Ground Rule", "body": "Sin texturas, grano, degradados ni brillos.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do tomar el color de --g para todo lo accionable o en curso de la pantalla.",
+      "Do usar los colores semánticos (bien/mal/aviso) solo para estados.",
+      "Do dibujar los iconos con el set de línea de la app (24px, trazo 1.75).",
+      "Do mostrar los resultados como cifra grande seguida de su unidad."
+    ],
+    "donts": [
+      "Don't mezclar dos calibres en una misma pantalla fuera de la Ruta.",
+      "Don't poner etiquetas pequeñas encima de los títulos.",
+      "Don't usar emojis ni caracteres Unicode como iconos.",
+      "Don't dibujar amplificadores, perillas o vúmetros como decoración.",
+      "Don't añadir texturas, grano, brillos o degradados de fondo."
+    ]
+  }
+}

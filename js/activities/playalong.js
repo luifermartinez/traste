@@ -19,7 +19,7 @@ export function mount(root, { def, onDone }) {
   const cur = h('div', { class: 'pa-current' });
   const nxt = h('div', { class: 'pa-next' });
   const beatsEl = h('div', { class: 'beats' }, Array.from({ length: beatsPerChord }, () => h('span')));
-  const info = h('div', { class: 'eyebrow center', style: { display: 'block' } }, `${bpm} BPM · ${cycles} vueltas`);
+  const info = h('div', { class: 'counter-line' }, `${bpm} BPM · ${cycles} vueltas`);
   const patEl = h('div', { class: 'pa-pattern' }, h('span', { class: 'muted small' }, `Rasgueo: ${pat.name}`), h('b', null, pat.strokes.join(' ')));
   const prog = h('div', { class: 'pa-prog' }, chords.map((c) => h('span', null, chordName(c, 'es'))));
   const toggles = h('div', { class: 'row center', style: { gap: '20px' } },
@@ -31,7 +31,7 @@ export function mount(root, { def, onDone }) {
 
   const showChord = (i) => {
     cur.replaceChildren(chordCard(chords[i % chords.length], 'big'));
-    nxt.replaceChildren(h('span', { class: 'eyebrow' }, 'Siguiente'), h('b', null, chordName(chords[(i + 1) % chords.length])));
+    nxt.replaceChildren('Siguiente: ', h('b', null, chordName(chords[(i + 1) % chords.length])));
     [...prog.children].forEach((el, k) => el.classList.toggle('on', k === i % chords.length));
   };
   showChord(0);

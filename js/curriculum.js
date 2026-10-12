@@ -2,13 +2,14 @@
 // Cada habilidad tiene una métrica objetiva y un objetivo para darla por "superada".
 // Las habilidades con `ladder` suben de tempo (BPM) cada vez que alcanzas el objetivo.
 
+// gauge: grosor de púa (código de colores Tortex) que representa la etapa; el color vive en styles.css.
 export const STAGES = [
-  { n: 1, title: 'Primeros sonidos', goal: 'Afinar, conocer las cuerdas y tocar tus dos primeros acordes con ritmo.' },
-  { n: 2, title: 'Tres acordes, mil canciones', goal: 'La, Re y Mi: la base del rock y del pop. Corcheas ↓↑ y tu primera melodía en 3 cuerdas.' },
-  { n: 3, title: 'Los cuatro acordes del pop', goal: 'Sol, Do, Re y Mim con el rasgueo folk. Ubicar notas en la 6ª cuerda.' },
-  { n: 4, title: 'Blues y tu primera escala', goal: 'Blues de 12 compases, shuffle y la pentatónica menor para improvisar.' },
-  { n: 5, title: 'Rock, power chords y cejilla', goal: 'Power chords, ritmo punk, el temido Fa con cejilla y el campo armónico.' },
-  { n: 6, title: 'Latino y jazz', goal: 'Acordes de séptima, ii–V–I, tresillo y contratiempo.' },
+  { n: 1, gauge: '.50', title: 'Primeros sonidos', goal: 'Afinar, conocer las cuerdas y tocar tus dos primeros acordes con ritmo.' },
+  { n: 2, gauge: '.60', title: 'Tres acordes, mil canciones', goal: 'La, Re y Mi: la base del rock y del pop. Corcheas ↓↑ y tu primera melodía en 3 cuerdas.' },
+  { n: 3, gauge: '.73', title: 'Los cuatro acordes del pop', goal: 'Sol, Do, Re y Mim con el rasgueo folk. Ubicar notas en la 6ª cuerda.' },
+  { n: 4, gauge: '.88', title: 'Blues y tu primera escala', goal: 'Blues de 12 compases, shuffle y la pentatónica menor para improvisar.' },
+  { n: 5, gauge: '1.0', title: 'Rock, power chords y cejilla', goal: 'Power chords, ritmo punk, el temido Fa con cejilla y el campo armónico.' },
+  { n: 6, gauge: '1.14', title: 'Latino y jazz', goal: 'Acordes de séptima, ii–V–I, tresillo y contratiempo.' },
 ];
 
 const L = (id, stage, title, content) => ({ id, stage, type: 'lesson', title, content });

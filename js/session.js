@@ -7,16 +7,6 @@ import { state, isPassed, isAvailable, progress, reqsMet } from './store.js';
 export const ROLE_LABEL = {
   lesson: 'Aprende', tuner: 'Afina', focus: 'Foco', focus2: 'Foco 2', review: 'Repaso', mind: 'Mente', music: 'Música',
 };
-export const ROLE_HINT = {
-  lesson: 'Algo nuevo, a tu ritmo.',
-  tuner: 'Una guitarra desafinada hace que todo suene mal, aunque lo hagas bien.',
-  focus: 'Lo que más te acerca al siguiente paso.',
-  focus2: 'Otra habilidad en construcción.',
-  review: 'Mantener lo aprendido cuesta poco si lo repasas.',
-  mind: 'Entender lo que tocas acelera todo lo demás.',
-  music: 'Siempre terminas tocando música.',
-};
-
 // Plan de roles y segundos orientativos según los minutos disponibles.
 // Condicionales: 'lesson?' solo si no hay técnica pendiente disponible; 'flex' (sesiones
 // de 10 min) solo si hoy no hubo lección, y alterna Mente y Repaso (state.lastFlex).

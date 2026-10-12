@@ -9,12 +9,12 @@ export function header(def, extra = null) {
   const param = currentParam(def);
   const best = def.metric ? bestFor(def, param) : null;
   return h('div', { class: 'act-head' },
-    h('div', { class: 'eyebrow accent' }, icon(TYPE_ICON[def.type], { size: 14 }), TYPE_LABEL[def.type], param ? ` · ${param} BPM` : ''),
     h('h2', null, def.title),
-    def.desc && h('p', { class: 'muted' }, def.desc),
-    def.metric && h('div', { class: 'act-goal' },
-      h('span', null, icon('target', { size: 16 }), `Objetivo ${def.metric.lower ? '≤ ' : ''}${metricText(def, def.metric.target)}`),
+    h('div', { class: 'act-meta' },
+      h('span', { class: 'type' }, icon(TYPE_ICON[def.type], { size: 16 }), TYPE_LABEL[def.type], param ? ` · ${param} BPM` : ''),
+      def.metric && h('span', null, icon('target', { size: 16 }), `Objetivo ${def.metric.lower ? '≤ ' : ''}${metricText(def, def.metric.target)}`),
       best != null && h('span', null, icon('trophy', { size: 16 }), `Récord ${metricText(def, best)}`)),
+    def.desc && h('p', { class: 'muted', style: { marginTop: '8px' } }, def.desc),
     extra);
 }
 

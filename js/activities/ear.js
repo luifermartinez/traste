@@ -21,7 +21,7 @@ export function mount(root, { def, onDone }) {
   const sub = h('div', { class: 'prompt-sub' }, `Pista: ${hint}. Vale cualquier octava.`);
   const feedback = h('div', { class: 'feedback' });
   const fbEl = h('div', { class: 'fb-wrap' });
-  const progressEl = h('div', { class: 'eyebrow center', style: { display: 'block' } });
+  const progressEl = h('div', { class: 'counter-line' });
   const replay = h('button', { class: 'btn', onclick: () => play() }, icon('refresh', { size: 18 }), 'Repetir sonido');
   const giveUp = h('button', { class: 'btn ghost', onclick: () => reveal() }, 'Me rindo');
   const stage = h('div', { class: 'stage' }, progressEl, prompt, sub, h('div', { class: 'btn-row', style: { marginTop: '16px' } }, replay, giveUp), feedback, fbEl);

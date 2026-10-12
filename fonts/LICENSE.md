@@ -1,11 +1,5 @@
 # Fuentes
 
-Todas se distribuyen bajo la **SIL Open Font License 1.1** (https://openfontlicense.org).
+`rubik.woff2`: **Rubik** (Hubert & Fischer, Meir Sadan, Cyreal), bajo la **SIL Open Font License 1.1** (https://openfontlicense.org). Repositorio: https://github.com/googlefonts/rubik
 
-| Archivo | Fuente | Autoría |
-|---|---|---|
-| `big-shoulders.woff2` | Big Shoulders Display | Patric King, Gabriela Barreto (https://github.com/xotypeco/big_shoulders) |
-| `schibsted-grotesk.woff2` | Schibsted Grotesk | Schibsted, Bakken & Bæck (https://github.com/schibsted/schibsted-grotesk) |
-| `azeret-mono.woff2` | Azeret Mono | Displaay Type Foundry (https://github.com/displaay/Azeret) |
-
-Subconjunto latino obtenido de Google Fonts.
+Subconjunto latino, eje de peso 400–700, obtenido de Google Fonts.

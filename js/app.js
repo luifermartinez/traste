@@ -1,5 +1,5 @@
 // Aplicación: rutas, vistas y el ejecutor de la sesión diaria.
-import { h, progressBar, steps, status, sparkSvg, svgNode, chordCard, metricText, metricParts, toast } from './ui.js';
+import { h, progressBar, steps, status, sparkSvg, svgNode, chordCard, metricText, metricParts, toast, pick } from './ui.js';
 import { icon, TYPE_ICON } from './icons.js';
 import { STAGES, SKILLS, SKILL_BY_ID, TYPE_LABEL } from './curriculum.js';
 import {
@@ -7,7 +7,7 @@ import {
   progress, isPassed, isAvailable, stageProgress, stageSkills, currentParam, bestFor, skillState, unlockStage,
   totalMinutes, daysSinceLastSession, weekStart,
 } from './store.js';
-import { planRoles, resolveRole, previewSession, ROLE_LABEL, ROLE_HINT, currentStage } from './session.js';
+import { planRoles, resolveRole, previewSession, ROLE_LABEL, currentStage } from './session.js';
 import { runSkill } from './activities/index.js';
 import * as tunerActivity from './activities/tuner.js';
 import { setNotation, CHORDS, chordName } from './music.js';
@@ -31,21 +31,25 @@ const plural = (n, s, p = `${s}s`) => `${n} ${n === 1 ? s : p}`;
 const mmss = (sec) => `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`;
 const MIN_SESSION_SEC = 120;
 const topBar = (title, back, { settings = true } = {}) => h('header', { class: 'top' },
-  back && h('a', { href: back, class: 'icon-btn', 'aria-label': 'Volver', style: { marginLeft: '-10px' } }, icon('back', { size: 22 })),
-  title ? h('h1', null, title) : h('div', { class: 'brand' }, icon('pick', { size: 24 }), h('div', null, h('b', null, 'Traste'), h('small', { style: { display: 'block' } }, 'Sala de ensayo'))),
-  settings && h('a', { href: '#/ajustes', class: 'icon-btn', 'aria-label': 'Ajustes', style: { marginRight: '-10px' } }, icon('sliders', { size: 21 })));
+  back && h('a', { href: back, class: 'icon-btn', 'aria-label': 'Volver' }, icon('back', { size: 22 })),
+  h('h1', { style: back ? null : { paddingLeft: '8px' } }, title),
+  settings && h('a', { href: '#/ajustes', class: 'icon-btn', 'aria-label': 'Ajustes' }, icon('sliders', { size: 21 })));
 
 function render() {
   cleanup?.();
   cleanup = null;
   const [name = 'hoy', arg] = location.hash.replace(/^#\/?/, '').split('/');
+  // El calibre de la etapa actual tiñe toda la app.
+  document.documentElement.dataset.gauge = currentStage();
   app.replaceChildren();
   window.scrollTo(0, 0);
   const view = VIEWS[name] || VIEWS.hoy;
   cleanup = view(app, arg ? decodeURIComponent(arg) : undefined) || null;
   tabsEl.hidden = name === 'sesion' || name === 'practicar';
   const active = name === 'tool' || name === 'ajustes' ? 'herramientas' : name;
-  tabsEl.replaceChildren(...TABS.map(([id, ic, label]) => h('a', { href: `#/${id}`, class: id === active ? 'on' : '' }, icon(ic, { size: 22 }), label)));
+  tabsEl.replaceChildren(...TABS.map(([id, ic, label]) => h('a', { href: `#/${id}`, class: id === active ? 'on' : '', 'aria-current': id === active ? 'page' : null }, icon(ic, { size: 22 }), label)));
+  const css = getComputedStyle(document.documentElement);
+  document.querySelector('meta[name="theme-color"]').content = (VIEWS[name] === viewToday || !VIEWS[name] ? css.getPropertyValue('--g') : css.getPropertyValue('--ground')).trim();
 }
 
 // ─────────────── Hoy ───────────────
@@ -110,58 +114,60 @@ function insights() {
   });
   if (stuck) tips.push(['info', `"${stuck.title}" lleva 3 intentos sin récord. Es normal: haz la versión lenta y limpia, y revisa la lección. El cerebro consolida entre sesiones.`]);
 
-  if (!items.length && !tips.length) return null;
-  return h('div', { class: 'card' },
-    items.length > 0 && h('div', { class: 'eyebrow', style: { marginBottom: '6px' } }, title),
-    items.slice(0, 3).map((x) => h('div', { class: 'gain' }, h('span', null, x.title), h('b', null, x.change))),
-    tips.length > 0 && items.length > 0 && h('div', { class: 'divider' }),
-    tips.map(([ic, t]) => h('div', { class: 'insight' }, icon(ic, { size: 18 }), h('span', { class: 'small' }, t))));
+  if (!items.length && !tips.length) return [];
+  return [
+    h('div', { class: 'section' }, h('h2', null, items.length ? title : 'Para hoy')),
+    h('div', { class: 'list' },
+      items.slice(0, 3).map((x) => h('div', { class: 'gain' }, h('span', null, x.title), h('b', null, x.change))),
+      tips.map(([ic, t]) => h('div', { class: 'insight' }, icon(ic, { size: 18 }), h('span', null, t)))),
+  ];
+}
+
+/** Lo que ya se tocó hoy: queda a la vista, marcado como hecho. */
+function doneToday() {
+  const today = new Date().toDateString();
+  const rows = state.sessions.filter((s) => new Date(s.t).toDateString() === today).flatMap((s) => s.blocks || []);
+  if (!rows.length) return [];
+  return [
+    h('div', { class: 'section' }, h('h2', null, 'Hecho hoy')),
+    h('div', { class: 'list' }, rows.map((b) => {
+      const def = SKILL_BY_ID[b.id];
+      if (!def) return null;
+      return h('div', { class: 'item' },
+        h('span', { class: 'n done' }, icon('check', { size: 16 })),
+        h('div', { class: 'body' }, h('b', null, def.title)),
+        h('span', { class: 'end' }, b.v == null || !def.metric ? 'lección' : metricText(def, b.v)));
+    })),
+  ];
 }
 
 function viewToday(root) {
-  const lv = levelInfo();
   const goal = state.settings.weeklyGoal;
   const done = sessionsThisWeek();
   const streak = streakWeeks();
   const since = daysSinceLastSession();
-  const hour = new Date().getHours();
-  let greeting = hour < 12 ? 'Buenos días' : hour < 20 ? 'Buenas tardes' : 'Buenas noches';
-  if (since == null) greeting = 'Bienvenido';
-  else if (since >= 7) greeting = 'Qué bueno verte de vuelta';
-  const weekMsg = since == null ? 'Tu primera sesión te espera. Empieza por lo básico, sin prisa.'
-    : done >= goal ? 'Objetivo semanal cumplido. Lo que sumes ahora es extra.'
-      : since >= 7 ? 'Hoy basta con una sesión corta: lo importante es volver.'
-        : `Te ${goal - done === 1 ? 'falta' : 'faltan'} ${plural(goal - done, 'sesión', 'sesiones')} para tu objetivo semanal.`;
+  const note = since == null ? 'Tu primera sesión empieza por lo básico, sin prisa.'
+    : since >= 7 ? 'Hoy basta con una sesión corta: lo importante es volver.'
+      : done >= goal ? 'Objetivo semanal cumplido. Lo que sumes ahora es extra.' : null;
 
   let minutes = state.settings.minutes;
-  // Perilla: cada duración es una posición del dial (grados).
-  const DIAL = [[5, -120], [10, -40], [15, 40], [20, 120]];
-  if (!DIAL.some(([m]) => m === minutes)) minutes = 10;
-  const knob = h('button', { class: 'knob', 'aria-label': 'Cambiar duración', onclick: () => setMinutes(DIAL[(DIAL.findIndex(([m]) => m === minutes) + 1) % DIAL.length][0]) });
-  const labels = DIAL.map(([m, deg]) => {
-    const rad = (deg * Math.PI) / 180;
-    return h('button', {
-      class: 'knob-label', style: { left: `${66 + 52 * Math.sin(rad)}px`, top: `${63 - 52 * Math.cos(rad)}px` }, onclick: () => setMinutes(m),
-    }, m);
-  });
-  const caption = h('div', { class: 'knob-caption' });
-  const setlist = h('ol');
-  const noteEl = h('div');
-  const dateLabel = new Date().toLocaleDateString('es', { weekday: 'short', day: 'numeric', month: 'short' });
-  function setMinutes(m) { minutes = m; state.settings.minutes = m; save(); paint(); }
+  const OPTIONS = [[5, 'exprés'], [10, ''], [15, ''], [20, '']];
+  if (!OPTIONS.some(([m]) => m === minutes)) minutes = 10;
+  const plan = h('div', { class: 'list' });
+  const lessonNote = h('div');
+  const seg = h('div', { class: 'seg', role: 'radiogroup', 'aria-label': 'Duración' }, OPTIONS.map(([m, sub]) => h('button', {
+    role: 'radio',
+    onclick: () => { minutes = m; state.settings.minutes = m; save(); paint(); },
+  }, `${m} min`, sub && h('small', null, sub))));
   function paint() {
-    const i = DIAL.findIndex(([m]) => m === minutes);
-    knob.style.setProperty('--rot', `${DIAL[i][1]}deg`);
-    labels.forEach((l, k) => l.classList.toggle('on', k === i));
+    [...seg.children].forEach((c, i) => { const on = OPTIONS[i][0] === minutes; c.classList.toggle('on', on); c.setAttribute('aria-checked', on); });
     const blocks = previewSession(minutes);
-    caption.replaceChildren(h('span', { class: 'eyebrow' }, 'Duración'), h('b', null, `${minutes} min`),
-      h('p', null, minutes === 5 ? 'Exprés: también cuenta para tu semana.' : `${plural(blocks.length, 'bloque')} · gira la perilla para cambiar`));
-    setlist.replaceChildren(...blocks.map((b, k) => h('li', null,
-      h('span', { class: 'n' }, String(k + 1).padStart(2, '0')),
-      h('div', { class: 't' }, h('b', null, b.def.title), h('span', null, ROLE_LABEL[b.role])),
-      icon(TYPE_ICON[b.def.type], { size: 18 }))));
-    noteEl.replaceChildren(...(blocks.some((b) => b.role === 'lesson')
-      ? [h('div', { class: 'setlist-note' }, 'Tras cada lección, la sesión sigue con la práctica que desbloquea.')] : []));
+    plan.replaceChildren(...blocks.map((b, k) => h('div', { class: 'item' },
+      h('span', { class: `n ${k === 0 ? 'next' : ''}` }, k + 1),
+      h('div', { class: 'body' }, h('b', null, b.def.title), h('span', null, `${ROLE_LABEL[b.role]} · ${TYPE_LABEL[b.def.type]}`)),
+      h('span', { class: 'end' }, `${Math.max(1, Math.round(b.sec / 60))} min`))));
+    lessonNote.replaceChildren(...(blocks.some((b) => b.role === 'lesson')
+      ? [h('div', { class: 'note' }, icon('info', { size: 16 }), 'Después de cada lección, la sesión sigue con la práctica que esa lección desbloquea.')] : []));
   }
   paint();
 
@@ -169,37 +175,35 @@ function viewToday(root) {
   const sp = stageProgress(stage.n);
   const cap = state.lastCapsuleAt ? (Date.now() - state.lastCapsuleAt) / 86400000 : null;
   const capsuleDue = state.sessions.length >= 2 && (cap == null || cap > 28);
+  const dateLabel = new Date().toLocaleDateString('es', { weekday: 'long', day: 'numeric', month: 'long' });
 
   root.append(...[
-    topBar(),
-    h('div', { class: 'greet' }, h('h1', null, greeting), h('p', null, weekMsg)),
-    h('div', { class: 'card amp screws' },
-      h('div', { class: 'eyebrow', style: { textAlign: 'center' } }, 'Esta semana'),
-      h('div', { class: 'amp-row', style: { marginTop: '12px' } },
-        h('div', { class: 'big-num' }, `${done}`, h('small', null, `de ${goal}`)),
-        h('div', { class: 'lamps', 'aria-label': `${done} de ${goal} sesiones` }, Array.from({ length: goal }, (_, k) => h('span', { class: `lamp ${k < done ? 'on' : ''}` })))),
-      h('div', { class: 'grille' }),
-      h('div', { class: 'amp-meta' },
-        h('span', { class: streak ? 'hot' : '' }, icon('flame', { size: 14 }), streak ? `Racha ${streak} sem` : 'Sin racha'),
-        h('span', null, `Nivel ${lv.level} · ${lv.into}/${lv.need}`))),
-    h('div', { class: 'card' },
-      h('div', { class: 'knob-row' }, h('div', { class: 'knob-box' }, knob, labels), caption),
-      h('div', { class: 'setlist' },
-        h('div', { class: 'setlist-head' }, h('b', null, 'Setlist'), h('span', null, dateLabel)),
-        setlist,
-        noteEl),
-      h('button', { class: 'btn primary big', onclick: () => startSession(minutes) }, icon('play', { size: 18 }), 'Empezar sesión')),
-    insights(),
-    capsuleDue && h('a', { class: 'card tool', href: '#/tool/capsula' },
-      h('span', { class: 'tool-icon' }, icon('tape', { size: 22 })),
-      h('div', { class: 'body' }, h('strong', null, 'Graba tu cápsula'),
-        h('p', { class: 'muted small' }, '30 segundos tocando lo que sepas. En un mes oirás la diferencia que no notas día a día.')),
-      icon('chevron', { size: 18 })),
-    h('a', { class: 'card', href: '#/ruta' },
-      h('div', { class: 'card-head', style: { marginBottom: '6px' } }, h('span', { class: 'eyebrow accent' }, `Etapa ${stage.n} de ${STAGES.length}`), h('span', { class: 'eyebrow' }, `${Math.round(sp * 100)}%`)),
-      h('h3', null, stage.title),
-      h('p', { class: 'muted small', style: { margin: '0 0 14px' } }, stage.goal),
-      progressBar(sp)),
+    h('section', { class: 'field' }, h('div', { class: 'field-inner' },
+      h('header', { class: 'top' },
+        h('span', { class: 'wordmark' }, 'Traste'),
+        h('a', { href: '#/ajustes', class: 'icon-btn', 'aria-label': 'Ajustes' }, icon('sliders', { size: 21 }))),
+      pick(stage.gauge),
+      h('div', { class: 'field-stage' },
+        h('h1', null, `Etapa ${stage.n}`),
+        h('p', null, `${stage.title} · ${Math.round(sp * 100)}% superado`),
+        h('a', { href: '#/ruta' }, 'Ver la ruta', icon('chevron', { size: 16 }))),
+      h('div', { class: 'week' },
+        h('div', { class: 'marks', 'aria-hidden': 'true' }, Array.from({ length: goal }, (_, k) => h('i', { class: k < done ? 'on' : '' }))),
+        h('span', null, `${Math.min(done, goal)} de ${goal} sesiones esta semana`),
+        streak > 0 && h('span', { class: 'streak' }, icon('flame', { size: 15 }), `${plural(streak, 'semana')} de racha`)))),
+    h('div', { class: 'section' }, h('h2', null, 'Sesión de hoy'), h('span', { class: 'muted small' }, dateLabel)),
+    note && h('p', { class: 'muted', style: { marginTop: 0 } }, note),
+    seg,
+    plan,
+    lessonNote,
+    h('button', { class: 'btn primary big', onclick: () => startSession(minutes) }, icon('play', { size: 18 }), 'Empezar sesión'),
+    ...doneToday(),
+    ...insights(),
+    capsuleDue && h('div', { class: 'list', style: { marginTop: '24px' } },
+      h('a', { class: 'item', href: '#/tool/capsula' },
+        h('span', { class: 'tool-icon' }, icon('tape', { size: 20 })),
+        h('div', { class: 'body' }, h('b', null, 'Graba tu cápsula del tiempo'), h('span', null, '30 segundos. En un mes oirás la diferencia que no notas día a día.')),
+        icon('chevron', { size: 18 }))),
   ].filter(Boolean));
 }
 
@@ -213,13 +217,13 @@ function startSession(minutes) {
 function viewSession(root) {
   if (!session) { go('#/hoy'); return null; }
   let stopAct = null;
-  const timeEl = h('span', { class: 'clock' });
-  const blockEl = h('span', { class: 'eyebrow' });
+  const timeEl = h('span', { class: 'clock', style: { minWidth: '64px', justifyContent: 'flex-end', paddingRight: '8px' } });
+  const blockEl = h('span', { class: 'title' });
   const bar = progressBar(0, 'thin');
   const body = h('div', { class: 'session-body' });
   const quitBtn = h('button', { class: 'icon-btn', 'aria-label': 'Terminar sesión', onclick: quit }, icon('close', { size: 22 }));
   root.append(h('div', { class: 'session-top' },
-    h('div', { class: 'row between' }, quitBtn, blockEl, timeEl), bar), body);
+    h('div', { class: 'row between' }, quitBtn, blockEl, timeEl), h('div', { style: { padding: '0 8px' } }, bar)), body);
   const tick = () => { timeEl.replaceChildren(icon('clock', { size: 16 }), mmss(Math.floor((Date.now() - session.t0) / 1000))); };
   tick();
   const timer = setInterval(tick, 1000);
@@ -234,12 +238,10 @@ function viewSession(root) {
       const { def, role: r } = res;
       session.used.add(def.id);
       if (role === 'flex') { state.lastFlex = r; save(); }
-      blockEl.textContent = `Bloque ${session.blocks.length + 1}`;
+      blockEl.textContent = `${ROLE_LABEL[r]} · bloque ${session.blocks.length + 1}`;
       bar.firstChild.style.width = `${Math.round((session.idx / session.roles.length) * 100)}%`;
       const holder = h('div');
-      body.replaceChildren(
-        h('div', { class: 'block-intro' }, h('span', { class: 'eyebrow accent' }, `${ROLE_LABEL[r]} · ~${Math.round(sec / 60)} min`), h('span', { class: 'muted small' }, ROLE_HINT[r])),
-        holder);
+      body.replaceChildren(holder);
       window.scrollTo(0, 0);
       stopAct = runSkill(holder, def, {
         budgetSec: sec,
@@ -275,8 +277,8 @@ function viewSession(root) {
     blockEl.textContent = '';
     const weekDone = sessionsThisWeek();
     body.replaceChildren(h('div', { class: 'card result' },
-      h('div', { class: 'eyebrow' }, `${mmss(seconds)} de práctica · ${plural(done.length, 'bloque')}`),
       h('div', { class: 'res-title' }, counts ? 'Sesión completada' : 'Sesión corta'),
+      h('p', { class: 'muted', style: { marginTop: 0 } }, `${mmss(seconds)} de práctica · ${plural(done.length, 'bloque')}`),
       counts
         ? h('div', { style: { margin: '14px 0 4px' } },
           h('div', { class: 'row between small', style: { marginBottom: '8px' } },
@@ -284,10 +286,10 @@ function viewSession(root) {
             h('span', { class: 'muted num' }, `${weekDone} de ${goal}`)),
           steps(weekDone, goal))
         : h('p', { class: 'muted' }, 'Lo que practicaste quedó guardado, pero para contar en tu semana la sesión debe durar al menos 2 minutos.'),
-      h('ul', { class: 'summary' }, done.map((b) => h('li', null,
-        h('span', null, b.def.title),
+      h('ul', { class: 'summary' }, s.blocks.map((b) => h('li', null,
+        h('span', { class: b.summary.skipped ? 'skip' : null }, b.def.title),
         h('span', null,
-          b.summary.lesson ? 'lección' : metricText(b.def, b.summary.value),
+          b.summary.skipped ? 'saltado' : b.summary.lesson ? 'lección' : metricText(b.def, b.summary.value),
           b.summary.isPR && icon('trophy', { size: 16, cls: 'pr-ic' }),
           b.summary.passedNow && icon('check', { size: 16, cls: 'ok-ic' }))))),
       badges.map((b) => status(b.icon, `Insignia: ${b.name}`, 'accent')),
@@ -314,11 +316,12 @@ function viewSession(root) {
 function viewPractice(root, id) {
   const def = SKILL_BY_ID[id];
   if (!def) { go('#/ruta'); return null; }
-  root.append(h('div', { class: 'session-top' }, h('a', { class: 'btn small ghost', href: '#/ruta', style: { paddingLeft: '4px' } }, icon('back', { size: 18 }), 'Ruta')));
+  root.append(h('header', { class: 'top' }, h('a', { href: '#/ruta', class: 'btn small ghost' }, icon('back', { size: 18 }), 'Ruta')));
   if (!isAvailable(def)) {
     const req = (def.req || []).map((r) => SKILL_BY_ID[r]);
-    root.append(h('div', { class: 'card' }, h('div', { class: 'row muted' }, icon('lock', { size: 18 }), 'Bloqueada'), h('h2', null, def.title), h('p', null, 'Primero completa:'),
-      h('ul', null, req.map((r) => h('li', null, h('a', { href: `#/practicar/${r.id}`, style: { color: 'var(--accent)' } }, r.title))))));
+    root.append(h('h2', null, def.title), h('p', { class: 'muted' }, 'Bloqueada. Primero completa:'),
+      h('div', { class: 'list' }, req.map((r) => h('a', { class: 'item', href: `#/practicar/${r.id}` },
+        h('span', { class: 'tool-icon' }, icon(TYPE_ICON[r.type], { size: 18 })), h('div', { class: 'body' }, h('b', null, r.title)), icon('chevron', { size: 18 })))));
     return null;
   }
   const holder = h('div');
@@ -348,25 +351,36 @@ function skillRow(d) {
     avail && icon('chevron', { size: 16 }));
 }
 
+/** Las seis púas de la ruta, unidas por la línea del recorrido hasta la etapa actual. */
+function gaugeRow(cur) {
+  const span = 86; // % del ancho entre la primera y la última púa (7% de margen a cada lado)
+  return h('div', { class: 'gauges', role: 'list' },
+    h('i', { class: 'course', style: { width: `${((cur - 1) / (STAGES.length - 1)) * span}%` } }),
+    STAGES.map((st) => h('a', {
+      href: `#stage-${st.n}`, role: 'listitem',
+      class: `${st.n === cur ? 'current' : ''} ${st.n > state.unlockedStage ? 'locked' : ''}`,
+      'aria-label': `Etapa ${st.n}, calibre ${st.gauge}`,
+      onclick: (e) => { e.preventDefault(); const d = document.getElementById(`stage-${st.n}`); d.open = true; d.scrollIntoView({ behavior: 'smooth', block: 'start' }); },
+    }, pick(st.gauge, { stage: st.n, size: st.n === cur ? 52 : 42 }), `Etapa ${st.n}`)));
+}
+
 function viewPath(root) {
-  root.append(topBar('Ruta'),
-    h('p', { class: 'muted', style: { marginTop: 0 } }, 'Seis etapas, de la primera cuerda al jazz. Cada habilidad tiene un objetivo medible; al superar el 80% de una etapa se abre la siguiente.'));
   const cur = currentStage();
-  const route = h('div', { class: 'route' });
+  root.append(topBar('Ruta'),
+    h('p', { class: 'muted', style: { marginTop: 0 } }, 'Seis etapas, seis calibres de púa: de la .50 a la 1.14. Al superar el 80% de una etapa pasas a la púa siguiente.'),
+    gaugeRow(cur));
   for (const st of STAGES) {
     const unlocked = st.n <= state.unlockedStage;
     const p = stageProgress(st.n);
-    const state_ = !unlocked ? 'locked' : st.n === cur ? 'current' : p >= 0.8 ? 'done' : '';
-    const card = h('details', { class: `stage-card ${state_}`, open: st.n === cur },
+    const card = h('details', { id: `stage-${st.n}`, class: `stage-card ${unlocked ? '' : 'locked'}`, open: st.n === cur },
       h('summary', null,
-        h('span', { class: 'stage-num' }, String(st.n).padStart(2, '0')),
-        h('div', { class: 'panel' },
-          h('div', { class: 'card-head', style: { marginBottom: '6px' } },
-            h('span', { class: `eyebrow ${st.n === cur ? 'accent' : ''}` }, st.n === cur ? 'Estás aquí' : unlocked ? `Etapa ${st.n}` : 'Bloqueada'),
-            unlocked ? h('span', { class: 'eyebrow' }, `${Math.round(p * 100)}%`) : icon('lock', { size: 15 })),
-          h('h3', { style: { margin: '0 0 6px' } }, st.title),
-          h('p', { class: 'muted small', style: { margin: 0 } }, st.goal),
-          unlocked && progressBar(p))));
+        h('div', { class: 'stage-head' },
+          pick(st.gauge, { stage: st.n, size: 40 }),
+          h('div', { class: 'body' },
+            h('h2', null, `${st.n}. ${st.title}`),
+            h('p', null, st.goal),
+            unlocked && h('div', { class: `bar g${st.n}` }, h('div', { style: { width: `${Math.round(p * 100)}%` } }))),
+          h('span', { class: 'pct' }, unlocked ? `${Math.round(p * 100)}%` : icon('lock', { size: 16 })))));
     if (unlocked) card.append(h('div', { class: 'skills' }, stageSkills(st.n).map(skillRow)));
     else {
       card.append(h('button', {
@@ -376,9 +390,8 @@ function viewPath(root) {
         },
       }, 'Ya sé esto: abrir etapa'));
     }
-    route.append(card);
+    root.append(card);
   }
-  root.append(route);
 }
 
 // ─────────────── Progreso ───────────────
@@ -395,39 +408,52 @@ function weeksChart() {
     ws = d.getTime();
   }
   const max = Math.max(goal, ...weeks.map((w) => w.n));
-  return h('div', { class: 'weeks' }, weeks.map((w) => h('div', { class: `wk ${w.n >= goal ? 'ok' : ''}` },
-    h('div', { class: 'wk-bar', style: { height: `${(w.n / max) * 100}%` } }),
-    h('small', null, new Date(w.ws).toLocaleDateString('es', { day: 'numeric', month: 'short' })))));
+  return h('div', { class: 'weeks', role: 'img', 'aria-label': `Sesiones de las últimas 8 semanas: ${weeks.map((w) => w.n).join(', ')}` },
+    weeks.map((w) => h('div', { class: `wk ${w.n >= goal ? 'ok' : w.n === 0 ? 'empty' : ''}` },
+      h('b', null, w.n || ''),
+      h('div', { class: 'wk-bar', style: { height: `${(w.n / max) * 78}%` } }),
+      h('small', null, new Date(w.ws).toLocaleDateString('es', { day: 'numeric', month: 'short' })))));
 }
 
 function viewProgress(root) {
   const lv = levelInfo();
+  const earned = BADGES.filter((b) => state.badges[b.id]);
+  const pending = BADGES.filter((b) => !state.badges[b.id]);
+  const fact = (label, value) => h('div', { class: 'item' }, h('div', { class: 'body' }, h('b', null, label)), h('span', { class: 'end', style: { color: 'var(--fg)', fontWeight: 600, fontSize: '1.05rem' } }, value));
   root.append(topBar('Progreso'),
-    h('div', { class: 'stats' },
-      h('div', { class: 'stat' }, h('b', null, state.sessions.length), h('small', null, 'sesiones')),
-      h('div', { class: 'stat' }, h('b', null, totalMinutes()), h('small', null, 'minutos')),
-      h('div', { class: 'stat' }, h('b', null, state.prCount), h('small', null, 'récords')),
-      h('div', { class: 'stat' }, h('b', null, lv.level), h('small', null, 'nivel'))),
-    h('div', { class: 'card' },
-      h('div', { class: 'card-head' }, h('h3', { style: { margin: 0 } }, 'Sesiones por semana'), h('span', { class: 'muted small' }, `objetivo ${state.settings.weeklyGoal}`)),
-      weeksChart()),
-    h('div', { class: 'card' },
-      h('div', { class: 'card-head' }, h('h3', { style: { margin: 0 } }, 'Insignias'), h('span', { class: 'muted small num' }, `${Object.keys(state.badges).length} de ${BADGES.length}`)),
-      h('div', { class: 'badges' }, BADGES.map((b) => h('div', { class: `badge ${state.badges[b.id] ? 'on' : ''}`, title: b.desc },
-        h('span', { class: 'medal' }, icon(b.icon, { size: 22 })), h('small', null, b.name))))));
+    h('div', { class: 'list' },
+      fact('Sesiones', state.sessions.length),
+      fact('Minutos tocando', totalMinutes()),
+      fact('Récords personales', state.prCount),
+      fact(`Nivel ${lv.level} · ${lv.title}`, `${lv.into}/${lv.need} XP`)),
+    h('div', { class: 'section' }, h('h2', null, 'Sesiones por semana'), h('span', { class: 'muted small' }, `objetivo ${state.settings.weeklyGoal}`)),
+    h('div', { class: 'card' }, weeksChart()),
+    h('div', { class: 'section' }, h('h2', null, 'Insignias'), h('span', { class: 'muted small num' }, `${earned.length} de ${BADGES.length}`)),
+    h('div', { class: 'list' },
+      earned.length
+        ? earned.map((b) => h('div', { class: 'item badge-row' }, h('span', { class: 'medal' }, icon(b.icon, { size: 20 })),
+          h('div', { class: 'body' }, h('b', null, b.name), h('span', null, b.desc)),
+          h('span', { class: 'end' }, new Date(state.badges[b.id]).toLocaleDateString('es', { day: 'numeric', month: 'short' }))))
+        : h('div', { class: 'item' }, h('div', { class: 'body' }, h('span', null, 'Completa tu primera sesión para ganar la primera.'))),
+      pending.length > 0 && h('details', null,
+        h('summary', { class: 'item', style: { cursor: 'pointer', color: 'var(--muted)' } }, `Por ganar (${pending.length})`),
+        pending.map((b) => h('div', { class: 'item', style: { opacity: 0.65 } }, h('span', { class: 'n' }, icon(b.icon, { size: 16 })),
+          h('div', { class: 'body' }, h('b', null, b.name), h('span', null, b.desc)))))));
 
   const charts = SKILLS.filter((d) => d.metric && skillState(d.id).history.length);
-  root.append(h('div', { class: 'eyebrow section-title' }, 'Evolución por habilidad'));
+  root.append(h('div', { class: 'section' }, h('h2', null, 'Evolución por habilidad')));
   if (!charts.length) root.append(h('p', { class: 'muted' }, 'Tus gráficas aparecerán cuando completes tu primera sesión.'));
   for (const d of charts) {
     const all = skillState(d.id).history;
     const best = bestFor(d);
+    const [bestValue, unit] = metricParts(d, best);
     root.append(h('div', { class: 'card' },
-      h('div', { class: 'card-head', style: { marginBottom: 0 } }, h('strong', null, d.title), h('span', { class: 'muted small' }, plural(all.length, 'intento'))),
+      h('div', { class: 'card-head', style: { marginBottom: 0 } }, h('b', { style: { fontWeight: 600 } }, d.title), h('span', { class: 'muted small' }, plural(all.length, 'intento'))),
+      h('div', { class: 'res-value chart-best' }, h('b', null, bestValue), h('span', null, `${unit} · tu mejor marca`)),
       svgNode(sparkSvg(all.slice(-24).map((x) => x.v), { target: d.metric.target, lower: d.metric.lower })),
-      h('div', { class: 'row between small' },
-        h('span', { class: 'muted' }, `Primera ${metricText(d, all[0].v)}`),
-        h('span', null, `Mejor ${metricText(d, best)}${d.ladder ? ` · ${currentParam(d)} BPM` : ''}`))));
+      h('div', { class: 'chart-values' },
+        h('span', null, 'Primera ', h('b', null, metricText(d, all[0].v))),
+        h('span', { style: { color: 'var(--ok)' } }, `Objetivo ${metricText(d, d.metric.target)}`))));
   }
 }
 
@@ -441,15 +467,15 @@ const TOOLS = [
   ['calibrar', 'mic', 'Calibrar micrófono', 'Latencia y sensibilidad de detección.'],
 ];
 
-const toolRow = (href, ic, name, desc) => h('a', { class: 'card tool', href },
-  h('span', { class: 'tool-icon' }, icon(ic, { size: 22 })),
-  h('div', { class: 'body' }, h('strong', null, name), h('p', { class: 'muted small' }, desc)),
+const toolRow = (href, ic, name, desc) => h('a', { class: 'item', href },
+  h('span', { class: 'tool-icon' }, icon(ic, { size: 20 })),
+  h('div', { class: 'body' }, h('b', null, name), h('span', null, desc)),
   icon('chevron', { size: 18 }));
 
 function viewTools(root) {
   root.append(topBar('Herramientas'),
-    ...TOOLS.map(([id, ic, name, desc]) => toolRow(`#/tool/${id}`, ic, name, desc)),
-    toolRow('#/ajustes', 'sliders', 'Ajustes', 'Notación, objetivo semanal, volumen, copia de seguridad.'));
+    h('div', { class: 'list' }, TOOLS.map(([id, ic, name, desc]) => toolRow(`#/tool/${id}`, ic, name, desc))),
+    h('div', { class: 'list', style: { marginTop: '18px' } }, toolRow('#/ajustes', 'sliders', 'Ajustes', 'Notación, objetivo semanal, volumen, copia de seguridad.')));
 }
 
 function toolMetronome(root) {
@@ -487,8 +513,8 @@ function toolMetronome(root) {
     },
   }, `${n}/4`)));
   root.append(topBar('Metrónomo', '#/herramientas'), h('div', { class: 'card' },
-    h('div', { class: 'eyebrow center', style: { display: 'block' } }, 'BPM'),
     bpmEl,
+    h('div', { class: 'unit' }, 'pulsos por minuto'),
     lights,
     slider,
     h('div', { class: 'btn-row' }, [-5, -1, 1, 5].map((d) => h('button', { class: 'btn', onclick: () => setBpm(bpm + d) }, d > 0 ? `+${d}` : `−${-d}`))),
@@ -568,7 +594,7 @@ function toolCalibrate(root) {
 
   root.append(topBar('Calibrar', '#/herramientas'),
     h('div', { class: 'card' },
-      h('div', { class: 'card-head' }, h('h3', { style: { margin: 0 } }, 'Latencia'), latEl),
+      h('div', { class: 'card-head' }, h('h2', { style: { margin: 0, fontSize: '1.25rem' } }, 'Latencia'), latEl),
       h('p', { class: 'muted small' }, 'El móvil tarda unos milisegundos en sacar el sonido y en escuchar. Medirlo hace justa la evaluación de ritmo.'),
       h('div', { class: 'btn-row', style: { marginTop: '12px' } },
         h('button', { class: 'btn primary', onclick: () => run(calibrateLoopback, 'Silencio: escuchando los clics del altavoz…') }, 'Automática'),
@@ -581,12 +607,12 @@ function toolCalibrate(root) {
         }, icon('headphones', { size: 18 }), 'Tocando')),
       beatDot, statusEl),
     h('div', { class: 'card' },
-      h('h3', null, 'Sensibilidad'),
+      h('h2', { style: { fontSize: '1.25rem' } }, 'Sensibilidad'),
       h('p', { class: 'muted small' }, 'Rasguea: el círculo debe encenderse con cada golpe pero no con voces o ruidos. Si no se enciende, sube la sensibilidad; si salta solo, bájala.'),
       listen,
       h('div', { style: { marginTop: '16px' } }, levelBar),
       onsetDot,
-      h('div', { class: 'field' }, h('span', null, 'Menos', h('span', null, 'Más')), sens)));
+      h('div', { class: 'field-row' }, h('span', null, 'Menos', h('span', null, 'Más')), sens)));
   return () => {
     disposed = true;
     off?.();
@@ -663,7 +689,7 @@ function toolCapsule(root) {
       h('p', { style: { marginTop: 0 } }, 'Graba 30 segundos tocando lo mejor que sepas hoy. Toca siempre la progresión de tu etapa actual para poder comparar.'),
       h('p', { class: 'muted small' }, 'Las grabaciones se guardan solo en este dispositivo y no se incluyen en la copia de seguridad.'),
       btn, statusEl),
-    h('div', { class: 'eyebrow section-title' }, 'Tus cápsulas'),
+    h('div', { class: 'section' }, h('h2', null, 'Tus cápsulas')),
     list);
   refresh();
   return () => {
@@ -691,10 +717,10 @@ const TOOL_VIEWS = {
 function viewSettings(root) {
   const s = state.settings;
   const set = (k, v) => { s[k] = v; save(); };
-  const radios = (name, opts, current, onChange) => h('div', { class: 'radio-list' }, opts.map(([value, label]) => h('label', null,
+  const radios = (name, opts, current, onChange) => h('div', { class: 'list radio-list' }, opts.map(([value, label]) => h('label', null,
     h('span', null, label),
     h('input', { type: 'radio', name, checked: current === value, onchange: () => onChange(value) }))));
-  const slider = (label, key, min, max, step, onInput) => h('label', { class: 'field' },
+  const slider = (label, key, min, max, step, onInput) => h('label', { class: 'field-row' },
     h('span', null, label),
     h('input', { type: 'range', min, max, step, value: s[key], oninput: (e) => { set(key, +e.target.value); onInput?.(+e.target.value); } }));
   const fileIn = h('input', {
@@ -715,15 +741,13 @@ function viewSettings(root) {
   }, String(n))));
 
   root.append(topBar('Ajustes', '#/herramientas', { settings: false }),
+    h('div', { class: 'section', style: { marginTop: '8px' } }, h('h2', null, 'Nombres de las notas')),
+    radios('nota', [['es', 'Do Re Mi'], ['en', 'C D E'], ['both', 'Ambos: Do (C)']], s.notation, (v) => { set('notation', v); setNotation(v); }),
+    h('div', { class: 'section' }, h('h2', null, 'Objetivo semanal')),
+    h('p', { class: 'muted small', style: { marginTop: 0 } }, 'Sesiones por semana. La racha cuenta semanas, no días: saltarte un día no rompe nada.'),
+    goalSeg,
+    h('div', { class: 'section' }, h('h2', null, 'Sonido y micrófono')),
     h('div', { class: 'card' },
-      h('h3', null, 'Nombres de las notas'),
-      radios('nota', [['es', 'Do Re Mi'], ['en', 'C D E'], ['both', 'Ambos: Do (C)']], s.notation, (v) => { set('notation', v); setNotation(v); })),
-    h('div', { class: 'card' },
-      h('h3', null, 'Objetivo semanal'),
-      h('p', { class: 'muted small', style: { marginTop: 0 } }, 'Sesiones por semana. La racha cuenta semanas, no días: saltarte un día no rompe nada.'),
-      goalSeg),
-    h('div', { class: 'card' },
-      h('h3', null, 'Sonido y micrófono'),
       slider('Volumen del clic', 'clickVol', 0, 1, 0.05),
       slider('Volumen de la guitarra de la app', 'backingVol', 0, 1, 0.05),
       slider('Sensibilidad del micrófono', 'sensitivity', 0.5, 2.5, 0.1, setSensitivity)),

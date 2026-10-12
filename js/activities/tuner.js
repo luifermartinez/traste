@@ -1,4 +1,4 @@
-import { h, svgNode } from '../ui.js';
+import { h } from '../ui.js';
 import { icon } from '../icons.js';
 import { OPEN_MIDI, STRING_NUMS, midiToFreq, pcName, pcShort, freqToMidi } from '../music.js';
 import { acquireMic, releaseMic, readPitch, playNote, audioRunning } from '../audio.js';
@@ -6,44 +6,22 @@ import { header, errorBox, vibrate } from './common.js';
 
 const IN_TUNE = 5; // cents
 const HOLD_MS = 600;
-const REST = -56; // grados: la aguja reposa a la izquierda, como un vúmetro real
 
-/** Vúmetro analógico: ±50 cents = ±50°. Devuelve {el, set(cents|null), ok(bool)}. */
-function vuMeter() {
-  const PX = 150;
-  const PY = 182;
-  const pt = (deg, r) => {
-    const a = (deg * Math.PI) / 180;
-    return [(PX + r * Math.sin(a)).toFixed(1), (PY - r * Math.cos(a)).toFixed(1)];
-  };
-  const arc = (d0, d1, r) => `M${pt(d0, r).join(' ')} A${r} ${r} 0 0 1 ${pt(d1, r).join(' ')}`;
-  let s = '<svg viewBox="0 0 300 150" aria-hidden="true"><defs>'
-    + '<linearGradient id="vuFace" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f6e6bd"/><stop offset="1" stop-color="#d9bb7c"/></linearGradient>'
-    + '<radialGradient id="vuGlow" cx=".5" cy="1" r=".75"><stop offset="0" stop-color="#ffc56a" stop-opacity=".6"/><stop offset="1" stop-color="#ffc56a" stop-opacity="0"/></radialGradient>'
-    + '</defs><rect width="300" height="150" class="vu-face"/><rect width="300" height="150" class="vu-glow"/>';
-  s += `<path d="${arc(-50, 50, 132)}" class="vu-arc"/>`;
-  s += `<path d="${arc(-50, -30, 140)}" class="vu-red"/><path d="${arc(30, 50, 140)}" class="vu-red"/>`;
-  s += `<path d="${arc(-5, 5, 139)}" class="vu-zone"/>`;
-  for (let c = -50; c <= 50; c += 5) {
-    const major = c % 25 === 0;
-    const [x0, y0] = pt(c, 132);
-    const [x1, y1] = pt(c, major ? 119 : 125);
-    s += `<line x1="${x0}" y1="${y0}" x2="${x1}" y2="${y1}" class="vu-tick ${major ? 'major' : ''}"/>`;
-    if (major) {
-      const [tx, ty] = pt(c, 106);
-      s += `<text x="${tx}" y="${Number(ty) + 3}" text-anchor="middle" class="vu-txt">${c > 0 ? '+' : ''}${c}</text>`;
-    }
-  }
-  s += '<text x="150" y="104" text-anchor="middle" class="vu-brand">CENTS</text>';
-  s += `<line x1="${PX}" y1="${PY}" x2="${PX}" y2="30" class="vu-needle"/>`;
-  s += '<rect x="0" y="134" width="300" height="16" fill="#1b140d"/><rect x="0" y="134" width="300" height="1" fill="#000" opacity=".5"/></svg>';
-  const lamp = h('span', { class: 'lamp' });
-  const el = h('div', { class: 'vu' }, svgNode(s), lamp);
-  const needle = el.querySelector('.vu-needle');
+/** Medidor lineal: ±50 cents a lo ancho, zona verde de ±5. Devuelve {el, set(cents|null), ok(bool)}. */
+function centsMeter() {
+  const dot = h('div', { class: 'meter-dot idle' });
+  const ticks = [-50, -25, 25, 50].map((c) => h('i', { class: 'meter-tick', style: { left: `${50 + c}%` } }));
+  const el = h('div', null,
+    h('div', { class: 'meter', role: 'img', 'aria-label': 'Desviación en cents' },
+      h('div', { class: 'meter-zone' }), h('div', { class: 'meter-track' }), ticks, h('i', { class: 'meter-tick mid', style: { left: '50%' } }), dot),
+    h('div', { class: 'meter-scale' }, h('span', null, '−50'), h('span', null, '0'), h('span', null, '+50')));
   return {
     el,
-    set(cents) { needle.style.transform = `rotate(${cents == null ? REST : Math.max(-55, Math.min(55, cents))}deg)`; },
-    ok(on) { lamp.classList.toggle('on', on); el.classList.toggle('ok', on); },
+    set(cents) {
+      dot.classList.toggle('idle', cents == null);
+      dot.style.left = `${cents == null ? 50 : 50 + Math.max(-50, Math.min(50, cents))}%`;
+    },
+    ok(on) { dot.classList.toggle('ok', on); },
   };
 }
 
@@ -52,8 +30,7 @@ export function mount(root, { def, onDone, standalone = false }) {
   const tuned = new Set();
   const chips = {};
   const noteEl = h('div', { class: 'tuner-note' }, '—');
-  const vu = vuMeter();
-  vu.set(null);
+  const meter = centsMeter();
   const centsEl = h('div', { class: 'tuner-cents' }, 'Toca una cuerda al aire');
   const hintEl = h('div', { class: 'tuner-hint' });
   let mic = null;
@@ -73,8 +50,8 @@ export function mount(root, { def, onDone, standalone = false }) {
     return chips[s];
   }));
 
-  const meter = vu.el;
-  const body = h('div', { class: 'tuner' }, noteEl, meter, centsEl, hintEl, strings,
+  const meterEl = meter.el;
+  const body = h('div', { class: 'tuner' }, noteEl, meterEl, centsEl, hintEl, strings,
     h('p', { class: 'muted small center' }, 'Toca una cuerda de la lista para oír su nota de referencia.'));
 
   const skipBtn = !standalone && h('button', { class: 'btn ghost block', onclick: () => onDone({ skipped: true }) }, 'Ya está afinada, saltar');
@@ -90,7 +67,7 @@ export function mount(root, { def, onDone, standalone = false }) {
     if (asleep) { centsEl.textContent = 'Toca una cuerda al aire'; asleep = false; }
     const p = readPitch(mic);
     if (!p.freq || p.clarity < 0.85 || p.freq < 70 || p.freq > 400) {
-      if (p.rms < 0.004) { inTuneSince = null; vu.ok(false); vu.set(null); }
+      if (p.rms < 0.004) { inTuneSince = null; meter.ok(false); meter.set(null); }
       return;
     }
     recent.push(p.freq);
@@ -110,13 +87,13 @@ export function mount(root, { def, onDone, standalone = false }) {
     }
     const { s, cents } = best;
     noteEl.textContent = `${s}ª · ${pcName(OPEN_MIDI[s])}`;
-    vu.set(cents);
+    meter.set(cents);
     centsEl.textContent = `${cents > 0 ? '+' : ''}${Math.round(cents)} cents · ${freq.toFixed(1)} Hz`;
     Object.values(chips).forEach((el) => el.classList.remove('active'));
     chips[s].classList.add('active');
 
     if (Math.abs(cents) <= IN_TUNE) {
-      vu.ok(true);
+      meter.ok(true);
       hint('ok', 'check', 'Afinada');
       inTuneSince ??= { s, t: performance.now() };
       if (inTuneSince.s === s && performance.now() - inTuneSince.t > HOLD_MS && !tuned.has(s)) {
@@ -126,7 +103,7 @@ export function mount(root, { def, onDone, standalone = false }) {
         if (!standalone && tuned.size === 6) finish();
       }
     } else {
-      vu.ok(false);
+      meter.ok(false);
       inTuneSince = null;
       hint('', cents < 0 ? 'arrowUp' : 'arrowDown', cents < 0 ? 'Grave: tensa la cuerda' : 'Aguda: aflójala un poco y vuelve a subir');
     }

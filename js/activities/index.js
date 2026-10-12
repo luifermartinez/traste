@@ -66,7 +66,7 @@ export function resultCard(s, onContinue) {
   if (s.stageUp) lines.push(status('route', 'Nueva etapa desbloqueada', 'ok'));
   for (const b of s.badges || []) lines.push(status(b.icon, `Insignia: ${b.name}`, 'accent'));
   return h('div', { class: 'card result' },
-    h('div', { class: 'eyebrow' }, def.title),
+    h('h2', null, def.title),
     hero,
     lines,
     s.xp ? h('div', { class: 'xp' }, icon('sparkle', { size: 16 }), `+${s.xp} XP`) : null,

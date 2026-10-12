@@ -52,6 +52,19 @@ export function status(iconName, text, tone = '') {
   return h('div', { class: `status ${tone}` }, icon(iconName, { size: 18 }), h('span', null, text));
 }
 
+/**
+ * Púa estampada con su calibre: la firma visual de la app. `stage` (1–6) elige el color
+ * por la clase g1…g6; sin `stage` usa el calibre actual del documento.
+ */
+export function pick(gauge, { stage = null, size = 64, cls = '', caption = 'mm' } = {}) {
+  const w = size;
+  const hgt = Math.round(size * 1.1);
+  return svgNode(`<svg class="pick ${stage ? `g${stage}` : ''} ${cls}" width="${w}" height="${hgt}" viewBox="0 0 100 110" aria-hidden="true">
+    <path class="pick-body" d="M50 3C86 3 97 21 97 40C97 67 68 93 50 107C32 93 3 67 3 40C3 21 14 3 50 3Z"/>
+    <text x="50" y="50" text-anchor="middle" class="pick-gauge">${gauge}</text>
+    <text x="50" y="66" text-anchor="middle" class="pick-unit">${caption}</text></svg>`);
+}
+
 // ─────────────── Diagrama de acorde ───────────────
 
 export function chordSvg(sym) {

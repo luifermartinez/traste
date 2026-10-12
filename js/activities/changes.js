@@ -31,7 +31,7 @@ export function mount(root, { def, onDone }) {
   const stage = h('div', { class: 'stage' },
     h('div', { class: 'chord-row' }, cardA, h('div', { class: 'swap' }, icon('swap', { size: 22 })), cardB),
     h('div', { class: 'col center', style: { alignItems: 'center', gap: '4px', margin: '18px 0 6px' } },
-      clock, counter, h('div', { class: 'eyebrow' }, 'cambios')),
+      clock, counter, h('div', { class: 'unit' }, 'cambios')),
     msg,
     h('div', { class: 'btn-row', style: { marginTop: '16px' } }, minus, tap),
     modeBtn);
